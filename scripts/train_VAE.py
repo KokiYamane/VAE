@@ -42,7 +42,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     torch.backends.cudnn.benchmark = True
 
     # figure
-    fig_generated_image = plt.figure(figsize=(20, 10))
+    fig_generated_image = plt.figure(figsize=(30, 15))
     fig_latent_space = plt.figure(figsize=(10, 10))
 
     for epoch in range(n_epochs + 1):
@@ -77,6 +77,8 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         running_loss = 0.0
         running_loss_KL = 0.0
         running_loss_reconstruction = 0.0
+        valid_mean = []
+        valid_label = []
         model.eval()
         for image, label in valid_loader:
             image = image.to(device)
@@ -90,10 +92,14 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             running_loss += loss.item()
             running_loss_KL += loss_KL.item()
             running_loss_reconstruction += loss_reconstruction.item()
+            valid_mean.append(mean)
+            valid_label.append(label)
         valid_loss = running_loss / len(valid_loader)
         valid_loss_KL = running_loss_KL / len(valid_loader)
         valid_loss_reconstruction = running_loss_reconstruction / len(valid_loader)
         valid_losses.append(valid_loss)
+        valid_mean = torch.cat(valid_mean, dim=0)
+        valid_label = torch.cat(valid_label, dim=0)
 
         end = time.time()
         elapsed_time = end - start
@@ -146,13 +152,13 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             image_ans = formatImages(image)
             image_hat = formatImages(y)
             fig_generated_image.clf()
-            plot_generated_image(fig_generated_image, image_ans, image_hat)
+            plot_generated_image(fig_generated_image, image_ans, image_hat, col=6)
             fig_generated_image.suptitle('{} epoch'.format(epoch))
             path_generated_image_png = os.path.join(out_dir, 'generated_image.png')
             fig_generated_image.savefig(path_generated_image_png)
 
             fig_latent_space.clf()
-            plot_latent_space(fig_latent_space, mean, label)
+            plot_latent_space(fig_latent_space, valid_mean, valid_label)
             fig_latent_space.suptitle('{} epoch'.format(epoch))
             path_latent_space = os.path.join(out_dir, 'latent_space.png')
             fig_latent_space.savefig(path_latent_space)
@@ -182,42 +188,46 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     print('total elapsed time: {} [s]'.format(total_elapsed_time))
 
 
-def main(args):
+def set_dataset(dataset, image_size):
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Resize(args.image_size),
-        # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        # transforms.RandomVerticalFlip(),
-        # transforms.RandomHorizontalFlip(),
-        # transforms.RandomRotation(20)
+        transforms.Resize(image_size),
     ])
 
-    # train_dataset = torchvision.datasets.STL10(
-    #     root='../datasets/stl10/',
-    #     split='train',
-    #     # split='unlabeled',
-    #     transform=transform,
-    #     download=True,
-    # )
-    # valid_dataset = torchvision.datasets.STL10(
-    #     root='../datasets/stl10/',
-    #     split='test',
-    #     # split='train',
-    #     transform=transform,
-    #     download=True,
-    # )
-    train_dataset = torchvision.datasets.MNIST(
-        root='../datasets/MNIST',
-        train=True,
-        transform=transform,
-        download=True,
-    )
-    valid_dataset = torchvision.datasets.MNIST(
-        root='../datasets/MNIST',
-        train=False,
-        transform=transform,
-        download=True,
-    )
+    if dataset == 'mnist':
+        train_dataset = torchvision.datasets.MNIST(
+            root='../datasets/mnist', train=True,
+            download=True, transform=transform)
+        valid_dataset = torchvision.datasets.MNIST(
+            root='../datasets/mnist', train=False,
+            download=True, transform=transform)
+    elif dataset == 'fashion-mnist':
+        train_dataset = torchvision.datasets.FashionMNIST(
+            root='../datasets/fashion-mnist', train=True,
+            download=True, transform=transform)
+        valid_dataset = torchvision.datasets.FashionMNIST(
+            root='../datasets/fashion-mnist', train=False,
+            download=True, transform=transform)
+    elif dataset == 'cifar10':
+        train_dataset = torchvision.datasets.CIFAR10(
+            root='../datasets/cifar10', train=True,
+            download=True, transform=transform)
+        valid_dataset = torchvision.datasets.CIFAR10(
+            root='../datasets/cifar10', train=False,
+            download=True, transform=transform)
+    elif dataset == 'stl10':
+        train_dataset = torchvision.datasets.STL10(
+            root='../datasets/stl10', split='train',
+            download=True, transform=transform)
+        valid_dataset = torchvision.datasets.STL10(
+            root='../datasets/stl10', split='test',
+            download=True, transform=transform)
+
+    return train_dataset, valid_dataset
+
+
+def main(args):
+    train_dataset, valid_dataset = set_dataset(args.data_path, image_size=args.image_size)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -270,11 +280,11 @@ def main(args):
 def argparse():
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('--data_path', type=str)
+    parser.add_argument('--data_path', type=str, default='mnist')
     parser.add_argument('--epoch', type=int, default=10000)
     parser.add_argument('--batch_size', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--image_size', type=int, default=96)
+    parser.add_argument('--image_size', type=int, default=32)
     parser.add_argument('--wandb', action='store_true')
     tp = lambda x:list(map(int, x.split(',')))
     parser.add_argument('--gpu_num', type=tp, default='0')

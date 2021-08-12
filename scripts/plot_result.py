@@ -1,4 +1,5 @@
 import numpy as np
+# from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
 
@@ -12,10 +13,10 @@ def formatImages(image):
     return image
 
 
-def plot_generated_image(fig, images_ans, images_hat):
-    col = 4
-    images_ans = images_ans[:16]
-    images_hat = images_hat[:16]
+def plot_generated_image(fig, images_ans, images_hat, col=4):
+    image_num = int(col**2)
+    images_ans = images_ans[:image_num]
+    images_hat = images_hat[:image_num]
 
     cmap = None
     channel = images_ans.shape[3]
@@ -39,8 +40,11 @@ def plot_latent_space(fig, zs, labels):
     zs = torch2numpy(zs)
     labels = torch2numpy(labels)
     ax = fig.add_subplot(111)
+    # pca = PCA()
+    # pca.fit(zs)
+    # points = pca.transform(zs)
     points = TSNE(n_components=2, random_state=0).fit_transform(zs)
-    im = ax.scatter(points[:, 0], points[:, 1], c=labels, cmap='jet')
+    im = ax.scatter(points[:, 0], points[:, 1], c=labels, cmap='jet', alpha=0.6)
     lim = np.max(np.abs(points)) * 1.1
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)

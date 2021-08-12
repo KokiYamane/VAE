@@ -49,14 +49,16 @@ class TestPlotResult(unittest.TestCase):
         for image, label in dataloader:
             image_ans = formatImages(image)
 
-            fig = plt.figure(figsize=(20, 10))
-            plot_generated_image(fig, image_ans, image_ans)
+            fig = plt.figure(figsize=(30, 15))
+            plot_generated_image(fig, image_ans, image_ans, col=6)
             plt.savefig(folder_name + '/test_generated_image.png')
             break
 
         fig = plt.figure(figsize=(10, 10))
-        zs = torch.randn(100, 2)
-        plot_latent_space(fig, zs, label)
+        point_num = 10000
+        zs = torch.randn(point_num, 10)
+        labels = torch.randint(high=10, size=(point_num,))
+        plot_latent_space(fig, zs, labels)
         plt.savefig(folder_name + '/test_latent_space.png')
 
 
