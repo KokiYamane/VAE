@@ -81,11 +81,11 @@ class Decoder(nn.Module):
 
 
 class VAE(nn.Module):
-    def __init__(self, z_dim=100, image_size=64):
+    def __init__(self, z_dim=10, image_size=64):
         super().__init__()
 
         # channels = [3, 8, 16, 32, 64, 128]
-        channels = [1, 8, 16, 32, 64, 128]
+        channels = [1, 8, 16, 32, 64]
         self.encoder = Encoder(z_dim, image_size, channels)
         self.decoder = Decoder(z_dim, image_size, channels)
 
@@ -104,13 +104,11 @@ class VAELoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.mse = nn.MSELoss()
-
-    def _torch_log(self, x):
-        return torch.log(torch.clamp(x, min=1e-10))
+    def _torch_log(self, x, eps=1e-10):
+        return torch.log(torch.clamp(x, min=eps))
 
     def forward(self, x, y, mean, std):
-        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).sum(axis=1).mean()
-        reconstruction = self.mse(x, y)
+        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).mean()
+        reconstruction = F.mse_loss(y, x)
 
         return KL, reconstruction

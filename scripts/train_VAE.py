@@ -43,6 +43,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
 
     # figure
     fig_generated_image = plt.figure(figsize=(20, 10))
+    fig_latent_space = plt.figure(figsize=(10, 10))
 
     for epoch in range(n_epochs + 1):
         start = time.time()
@@ -97,8 +98,9 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         end = time.time()
         elapsed_time = end - start
         total_elapsed_time += elapsed_time
-        print('epoch: {} train loss: {:}, vaild loss: {:}, elapsed time: {:.3f}'.format(
-            epoch, train_loss, valid_loss, elapsed_time))
+        print('epoch: {} train loss: {} ({}, {}), vaild loss: {} ({}, {}), elapsed time: {:.3f}'.format(
+            epoch, train_loss, train_loss_KL, train_loss_reconstruction,
+            valid_loss, valid_loss_KL, valid_loss_reconstruction, elapsed_time))
 
         # save model
         if valid_loss < best_test:
@@ -149,10 +151,17 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             path_generated_image_png = os.path.join(out_dir, 'generated_image.png')
             fig_generated_image.savefig(path_generated_image_png)
 
+            fig_latent_space.clf()
+            plot_latent_space(fig_latent_space, mean, label)
+            fig_latent_space.suptitle('{} epoch'.format(epoch))
+            path_latent_space = os.path.join(out_dir, 'latent_space.png')
+            fig_latent_space.savefig(path_latent_space)
+
             if wandb_flag:
                 wandb.log({
                     'epoch': epoch,
                     'generated_image': wandb.Image(fig_generated_image),
+                    'latent_space': wandb.Image(fig_latent_space),
                 })
                 wandb.save(path_generated_image_png)
 
@@ -232,7 +241,7 @@ def main(args):
     os.mkdir(out_dir)
 
     if args.wandb:
-        wandb.init(project='CVAE')
+        wandb.init(project='VAE')
         config = wandb.config
         config.data_path = args.data_path
         config.epoch = args.epoch
