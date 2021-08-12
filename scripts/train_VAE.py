@@ -36,14 +36,16 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model, device_ids=gpu_num)
     model.to(device)
+    # print(model.module)
 
     # acceleration
     scaler = torch.cuda.amp.GradScaler()
     torch.backends.cudnn.benchmark = True
 
     # figure
-    fig_generated_image = plt.figure(figsize=(30, 15))
+    fig_reconstructed_image = plt.figure(figsize=(30, 15))
     fig_latent_space = plt.figure(figsize=(10, 10))
+    fig_generated_image = plt.figure(figsize=(30, 30))
 
     for epoch in range(n_epochs + 1):
         start = time.time()
@@ -151,11 +153,11 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         if epoch % 10 == 0:
             image_ans = formatImages(image)
             image_hat = formatImages(y)
-            fig_generated_image.clf()
-            plot_generated_image(fig_generated_image, image_ans, image_hat, col=6)
-            fig_generated_image.suptitle('{} epoch'.format(epoch))
-            path_generated_image_png = os.path.join(out_dir, 'generated_image.png')
-            fig_generated_image.savefig(path_generated_image_png)
+            fig_reconstructed_image.clf()
+            plot_reconstructed_image(fig_reconstructed_image, image_ans, image_hat, col=6)
+            fig_reconstructed_image.suptitle('{} epoch'.format(epoch))
+            path_reconstructed_image_png = os.path.join(out_dir, 'reconstructed_image.png')
+            fig_reconstructed_image.savefig(path_reconstructed_image_png)
 
             fig_latent_space.clf()
             plot_latent_space(fig_latent_space, valid_mean, valid_label)
@@ -163,13 +165,23 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             path_latent_space = os.path.join(out_dir, 'latent_space.png')
             fig_latent_space.savefig(path_latent_space)
 
+            fig_generated_image.clf()
+            plot_generated_image(fig_generated_image, model.module, device)
+            fig_generated_image.suptitle('{} epoch'.format(epoch))
+            path_fig_generated_image = os.path.join(out_dir, 'generated_image.png')
+            fig_latent_space.savefig(path_fig_generated_image)
+
+            # pca = PCA()
+            # pca.fit(zs)
+            # points = pca.transform(zs)
+
             if wandb_flag:
                 wandb.log({
                     'epoch': epoch,
-                    'generated_image': wandb.Image(fig_generated_image),
+                    'reconstructed_image': wandb.Image(fig_reconstructed_image),
                     'latent_space': wandb.Image(fig_latent_space),
+                    'generated_image': wandb.Image(fig_generated_image),
                 })
-                wandb.save(path_generated_image_png)
 
         # wandb
         if wandb_flag:

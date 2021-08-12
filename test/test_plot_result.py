@@ -13,6 +13,7 @@ sns.set()
 import sys
 sys.path.append('.')
 sys.path.append('..')
+from scripts.VAE import VAE
 from scripts.plot_result import *
 
 
@@ -50,16 +51,26 @@ class TestPlotResult(unittest.TestCase):
             image_ans = formatImages(image)
 
             fig = plt.figure(figsize=(30, 15))
-            plot_generated_image(fig, image_ans, image_ans, col=6)
-            plt.savefig(folder_name + '/test_generated_image.png')
+            plot_reconstructed_image(fig, image_ans, image_ans, col=6)
+            fig.suptitle('title')
+            plt.savefig(folder_name + '/test_reconstructed_image.png')
             break
 
         fig = plt.figure(figsize=(10, 10))
-        point_num = 10000
+        point_num = 1000
         zs = torch.randn(point_num, 10)
         labels = torch.randint(high=10, size=(point_num,))
         plot_latent_space(fig, zs, labels)
+        fig.suptitle('title')
         plt.savefig(folder_name + '/test_latent_space.png')
+
+        model = VAE(image_size=image_size)
+        model.eval()
+
+        fig = plt.figure(figsize=(30, 30))
+        plot_generated_image(fig, model)
+        fig.suptitle('title')
+        plt.savefig(folder_name + '/test_generated_image.png')
 
 
 if __name__ == "__main__":

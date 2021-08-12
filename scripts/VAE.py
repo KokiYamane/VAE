@@ -81,7 +81,7 @@ class Decoder(nn.Module):
 
 
 class VAE(nn.Module):
-    def __init__(self, z_dim=10, image_size=64):
+    def __init__(self, z_dim=2, image_size=64):
         super().__init__()
 
         # channels = [3, 8, 16, 32, 64, 128]
@@ -92,6 +92,9 @@ class VAE(nn.Module):
     def _sample_z(self, mean, std):
         epsilon = torch.randn(mean.shape).to(mean.device)
         return mean + std * epsilon
+
+    def decode(self, z):
+        return self.decoder(z)
 
     def forward(self, x):
         mean, std = self.encoder(x)
