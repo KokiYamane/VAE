@@ -1,6 +1,6 @@
 import numpy as np
-# from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+# from sklearn.manifold import TSNE
 import torch
 
 
@@ -44,11 +44,11 @@ def plot_latent_space(fig, zs, labels, epoch=0):
     zs = torch2numpy(zs)
     labels = torch2numpy(labels)
     ax = fig.add_subplot(111)
-    # pca = PCA()
-    # pca.fit(zs)
-    # points = pca.transform(zs)
+    pca = PCA()
+    pca.fit(zs)
+    points = pca.transform(zs)
     # points = TSNE(n_components=2, random_state=0).fit_transform(zs)
-    points = zs
+    # points = zs
     im = ax.scatter(points[:, 0], points[:, 1], c=labels, cmap='jet', alpha=0.6)
     lim = np.max(np.abs(points)) * 1.1
     ax.set_xlim(-lim, lim)
@@ -60,12 +60,19 @@ def plot_latent_space(fig, zs, labels, epoch=0):
     ax.set_title('{} epoch'.format(epoch))
 
 
-def plot_generated_image(fig, model, device, col=10, epoch=0):
+def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0):
     row = col
 
-    x = np.tile(np.linspace(-2, 2, col), row)
-    y = np.repeat(np.linspace(2, -2, row), col)
+    x = np.tile(np.linspace(-20, 20, col), row)
+    y = np.repeat(np.linspace(20, -20, row), col)
     z = np.stack([x, y]).transpose()
+    zeros = np.zeros(shape=(z.shape[0], z_sumple.shape[1] - z.shape[1]))
+    z = np.concatenate([z, zeros], axis=1)
+
+    z_sumple = torch2numpy(z_sumple)
+    pca = PCA()
+    pca.fit(z_sumple)
+    z = pca.inverse_transform(z)
     z = torch.from_numpy(z.astype(np.float32)).to(device)
 
     images = model.decode(z)

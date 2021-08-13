@@ -57,16 +57,17 @@ class TestPlotResult(unittest.TestCase):
 
         fig = plt.figure(figsize=(10, 10))
         point_num = 1000
-        zs = torch.randn(point_num, 10)
+        z_dim = 10
+        zs = torch.randn(point_num, z_dim)
         labels = torch.randint(high=10, size=(point_num,))
         plot_latent_space(fig, zs, labels)
         plt.savefig(folder_name + '/test_latent_space.png')
 
-        model = VAE(image_size=image_size)
+        model = VAE(z_dim, image_size)
         model.eval()
 
         fig = plt.figure(figsize=(10, 10))
-        plot_generated_image(fig, model, device='cpu')
+        plot_generated_image(fig, model, z_sumple=zs, device='cpu')
         plt.savefig(folder_name + '/test_generated_image.png')
 
 

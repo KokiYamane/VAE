@@ -164,7 +164,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             fig_latent_space.savefig(path_latent_space)
 
             fig_generated_image.clf()
-            plot_generated_image(fig_generated_image, model.module, device, col=10, epoch=epoch)
+            plot_generated_image(fig_generated_image, model.module, device, z_sumple=valid_mean, col=10, epoch=epoch)
             path_fig_generated_image = os.path.join(out_dir, 'generated_image.png')
             fig_generated_image.savefig(path_fig_generated_image)
 
