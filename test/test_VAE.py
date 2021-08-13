@@ -62,6 +62,8 @@ class TestVAE(unittest.TestCase):
             loss_KL, loss_reconstruction = loss_fn(image, y, mean, std)
             loss = loss_KL + loss_reconstruction
             loss.backward()
+        print('loss_KL:', loss_KL.item())
+        print('loss_reconstruction:', loss_reconstruction.item())
 
 
 if __name__ == "__main__":

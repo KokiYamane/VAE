@@ -49,7 +49,7 @@ def plot_latent_space(fig, zs, labels, epoch=0):
     points = pca.transform(zs)
     # points = TSNE(n_components=2, random_state=0).fit_transform(zs)
     # points = zs
-    im = ax.scatter(points[:, 0], points[:, 1], c=labels, cmap='jet', alpha=0.6)
+    im = ax.scatter(points[:, 0], points[:, 1], c=labels, cmap='jet', marker='.')
     lim = np.max(np.abs(points)) * 1.1
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
@@ -63,8 +63,8 @@ def plot_latent_space(fig, zs, labels, epoch=0):
 def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0):
     row = col
 
-    x = np.tile(np.linspace(-20, 20, col), row)
-    y = np.repeat(np.linspace(20, -20, row), col)
+    x = np.tile(np.linspace(-2, 2, col), row)
+    y = np.repeat(np.linspace(2, -2, row), col)
     z = np.stack([x, y]).transpose()
     zeros = np.zeros(shape=(z.shape[0], z_sumple.shape[1] - z.shape[1]))
     z = np.concatenate([z, zeros], axis=1)

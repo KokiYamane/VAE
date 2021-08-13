@@ -1,3 +1,4 @@
+from matplotlib.pyplot import axis
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -61,14 +62,10 @@ class Decoder(nn.Module):
 
         self.feature_size = image_size // 2**(len(channels)-1)
 
-        self.dense = nn.Sequential(
-            nn.Linear(z_dim, channels[-1] * self.feature_size ** 2),
-            nn.ReLU(),
-        )
+        self.dense = nn.Linear(z_dim, channels[-1] * self.feature_size ** 2)
 
         deconv_list = []
-        deconv_list.append(nn.ConvTranspose2d(channels[-1], channels[-2], kernel_size=2, stride=2))
-        for i in reversed(range(1, len(channels)-1)):
+        for i in reversed(range(1, len(channels))):
             deconv_list.append(nn.ReLU())
             deconv_list.append(nn.ConvTranspose2d(channels[i], channels[i-1], kernel_size=2, stride=2))
         deconv_list.append(nn.Sigmoid())
@@ -111,8 +108,10 @@ class VAELoss(nn.Module):
         return torch.log(torch.clamp(x, min=eps))
 
     def forward(self, x, y, mean, std):
-        KL = -0.5 * torch.mean(torch.sum(1 + self._torch_log(std**2) - mean**2 - std**2, dim=1))
-        reconstruction = F.mse_loss(y, x)
-        KL *= 0
+        # Kullback–Leibler divergence
+        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).sum(axis=1).mean()
+
+        # Mean Squared Error
+        reconstruction = ((x - y)**2).reshape(x.shape[0], -1).sum(axis=1).mean()
 
         return KL, reconstruction
