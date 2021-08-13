@@ -111,7 +111,7 @@ class VAELoss(nn.Module):
         return torch.log(torch.clamp(x, min=eps))
 
     def forward(self, x, y, mean, std):
-        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).sum(axis=1).mean()
+        KL = -0.5 * torch.mean(torch.sum(1 + self._torch_log(std**2) - mean**2 - std**2, dim=1))
         reconstruction = F.mse_loss(y, x)
         KL *= 0
 

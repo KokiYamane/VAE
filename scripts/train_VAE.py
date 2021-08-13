@@ -45,7 +45,8 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     # figure
     fig_reconstructed_image = plt.figure(figsize=(30, 15))
     fig_latent_space = plt.figure(figsize=(10, 10))
-    fig_generated_image = plt.figure(figsize=(30, 30))
+    fig_generated_image = plt.figure(figsize=(10, 10))
+    fig_loss = plt.figure(figsize=(10, 10))
 
     for epoch in range(n_epochs + 1):
         start = time.time()
@@ -126,7 +127,6 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
                 model_param_dir,
                 'model_param_{:06d}.pt'.format(epoch))
             torch.save(model.state_dict(), path_model_param)
-
             if wandb_flag:
                 wandb.save(path_model_param)
 
@@ -140,14 +140,14 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         }, path_checkpoint)
 
         # plot loss
-        plt.clf()
-        plt.plot(train_losses, label='train')
-        plt.plot(valid_losses, label='valid')
-        plt.legend()
-        plt.xlabel('epoch')
-        plt.ylabel('MSE')
-        plt.title('loss')
-        plt.savefig(os.path.join(out_dir, 'loss.png'))
+        fig_loss.clf()
+        ax = fig_loss.add_subplot(111)
+        ax.plot(train_losses, label='train')
+        ax.plot(valid_losses, label='valid')
+        ax.legend()
+        ax.set_xlabel('epoch')
+        ax.set_title('loss')
+        fig_loss.savefig(os.path.join(out_dir, 'loss.png'))
 
         # show output
         if epoch % 10 == 0:
@@ -169,11 +169,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             plot_generated_image(fig_generated_image, model.module, device)
             fig_generated_image.suptitle('{} epoch'.format(epoch))
             path_fig_generated_image = os.path.join(out_dir, 'generated_image.png')
-            fig_latent_space.savefig(path_fig_generated_image)
-
-            # pca = PCA()
-            # pca.fit(zs)
-            # points = pca.transform(zs)
+            fig_generated_image.savefig(path_fig_generated_image)
 
             if wandb_flag:
                 wandb.log({
@@ -273,8 +269,6 @@ def main(args):
         config.train_data_num = len(train_dataset)
         config.valid_data_num = len(valid_dataset)
         wandb.watch(model)
-        wandb.save(os.path.join(out_dir, 'norm_mean.csv'))
-        wandb.save(os.path.join(out_dir, 'norm_std.csv'))
 
     train_VAE(
         n_epochs=args.epoch,
