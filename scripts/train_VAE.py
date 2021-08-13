@@ -43,7 +43,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     torch.backends.cudnn.benchmark = True
 
     # figure
-    fig_reconstructed_image = plt.figure(figsize=(30, 15))
+    fig_reconstructed_image = plt.figure(figsize=(20, 10))
     fig_latent_space = plt.figure(figsize=(10, 10))
     fig_generated_image = plt.figure(figsize=(10, 10))
     fig_loss = plt.figure(figsize=(10, 10))
@@ -154,20 +154,17 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             image_ans = formatImages(image)
             image_hat = formatImages(y)
             fig_reconstructed_image.clf()
-            plot_reconstructed_image(fig_reconstructed_image, image_ans, image_hat, col=6)
-            fig_reconstructed_image.suptitle('{} epoch'.format(epoch))
+            plot_reconstructed_image(fig_reconstructed_image, image_ans, image_hat, col=10, epoch=epoch)
             path_reconstructed_image_png = os.path.join(out_dir, 'reconstructed_image.png')
             fig_reconstructed_image.savefig(path_reconstructed_image_png)
 
             fig_latent_space.clf()
-            plot_latent_space(fig_latent_space, valid_mean, valid_label)
-            fig_latent_space.suptitle('{} epoch'.format(epoch))
+            plot_latent_space(fig_latent_space, valid_mean, valid_label, epoch=epoch)
             path_latent_space = os.path.join(out_dir, 'latent_space.png')
             fig_latent_space.savefig(path_latent_space)
 
             fig_generated_image.clf()
-            plot_generated_image(fig_generated_image, model.module, device)
-            fig_generated_image.suptitle('{} epoch'.format(epoch))
+            plot_generated_image(fig_generated_image, model.module, device, col=10, epoch=epoch)
             path_fig_generated_image = os.path.join(out_dir, 'generated_image.png')
             fig_generated_image.savefig(path_fig_generated_image)
 

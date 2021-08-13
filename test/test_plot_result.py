@@ -50,9 +50,8 @@ class TestPlotResult(unittest.TestCase):
         for image, label in dataloader:
             image_ans = formatImages(image)
 
-            fig = plt.figure(figsize=(30, 15))
-            plot_reconstructed_image(fig, image_ans, image_ans, col=6)
-            fig.suptitle('title')
+            fig = plt.figure(figsize=(20, 10))
+            plot_reconstructed_image(fig, image_ans, image_ans, col=10)
             plt.savefig(folder_name + '/test_reconstructed_image.png')
             break
 
@@ -61,15 +60,13 @@ class TestPlotResult(unittest.TestCase):
         zs = torch.randn(point_num, 10)
         labels = torch.randint(high=10, size=(point_num,))
         plot_latent_space(fig, zs, labels)
-        fig.suptitle('title')
         plt.savefig(folder_name + '/test_latent_space.png')
 
         model = VAE(image_size=image_size)
         model.eval()
 
-        fig = plt.figure(figsize=(30, 30))
-        plot_generated_image(fig, model)
-        fig.suptitle('title')
+        fig = plt.figure(figsize=(10, 10))
+        plot_generated_image(fig, model, device='cpu')
         plt.savefig(folder_name + '/test_generated_image.png')
 
 

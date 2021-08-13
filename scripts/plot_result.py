@@ -14,7 +14,7 @@ def formatImages(image):
     return image
 
 
-def plot_reconstructed_image(fig, images_ans, images_hat, col=4):
+def plot_reconstructed_image(fig, images_ans, images_hat, col=4, epoch=0):
     image_num = int(col**2)
     images_ans = images_ans[:image_num]
     images_hat = images_hat[:image_num]
@@ -29,17 +29,18 @@ def plot_reconstructed_image(fig, images_ans, images_hat, col=4):
         ax = fig.add_subplot(row, 2 * col, 2 * i + 1)
         ax.imshow(image_ans, cmap=cmap)
         ax.axis('off')
-        ax.set_title('$i_{' + str(i) + '}$')
+        # ax.set_title('$i_{' + str(i) + '}$')
 
         ax = fig.add_subplot(row, 2 * col, 2 * i + 2)
         ax.imshow(image_hat, cmap=cmap)
         ax.axis('off')
-        ax.set_title(r'$\hat{i}_{' + str(i) + '}$')
+        # ax.set_title(r'$\hat{i}_{' + str(i) + '}$')
 
+    fig.suptitle('{} epoch'.format(epoch))
     fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95)
 
 
-def plot_latent_space(fig, zs, labels):
+def plot_latent_space(fig, zs, labels, epoch=0):
     zs = torch2numpy(zs)
     labels = torch2numpy(labels)
     ax = fig.add_subplot(111)
@@ -56,9 +57,10 @@ def plot_latent_space(fig, zs, labels):
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.1)
     fig.colorbar(im, ax=ax, orientation='vertical', cax=cax)
+    ax.set_title('{} epoch'.format(epoch))
 
 
-def plot_generated_image(fig, model, device, col=10):
+def plot_generated_image(fig, model, device, col=10, epoch=0):
     row = col
 
     x = np.tile(np.linspace(-2, 2, col), row)
@@ -79,4 +81,5 @@ def plot_generated_image(fig, model, device, col=10):
         ax.imshow(image, cmap=cmap)
         ax.axis('off')
 
+    fig.suptitle('{} epoch'.format(epoch))
     fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95)
