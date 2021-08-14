@@ -193,7 +193,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     print('total elapsed time: {} [s]'.format(total_elapsed_time))
 
 
-def set_dataset(dataset, image_size):
+def torchvision_dataset(dataset, image_size):
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Resize(image_size),
@@ -205,6 +205,13 @@ def set_dataset(dataset, image_size):
             download=True, transform=transform)
         valid_dataset = torchvision.datasets.MNIST(
             root='../datasets/mnist', train=False,
+            download=True, transform=transform)
+    if dataset == 'emnist':
+        train_dataset = torchvision.datasets.EMNIST(
+            root='../datasets/emnist', split='balanced', train=True,
+            download=True, transform=transform)
+        valid_dataset = torchvision.datasets.EMNIST(
+            root='../datasets/emnist', split='balanced', train=False,
             download=True, transform=transform)
     elif dataset == 'fashion-mnist':
         train_dataset = torchvision.datasets.FashionMNIST(
@@ -227,12 +234,19 @@ def set_dataset(dataset, image_size):
         valid_dataset = torchvision.datasets.STL10(
             root='../datasets/stl10', split='test',
             download=True, transform=transform)
+    elif dataset == 'celebA':
+        train_dataset = torchvision.datasets.CelebA(
+            root='../datasets/celebA', split='train',
+            download=True, transform=transform)
+        valid_dataset = torchvision.datasets.CelebA(
+            root='../datasets/celebA', split='valid',
+            download=True, transform=transform)
 
     return train_dataset, valid_dataset
 
 
 def main(args):
-    train_dataset, valid_dataset = set_dataset(args.data_path, image_size=args.image_size)
+    train_dataset, valid_dataset = torchvision_dataset(args.data_path, image_size=args.image_size)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size,
