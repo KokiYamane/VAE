@@ -32,9 +32,9 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     # device setting
     device = torch.device('cuda:{}'.format(gpu_num[0]) if torch.cuda.is_available() else 'cpu')
     print('device:', device)
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model, device_ids=gpu_num)
+    # if torch.cuda.device_count() > 1:
+    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    model = nn.DataParallel(model, device_ids=gpu_num)
     model.to(device)
     # print(model.module)
 

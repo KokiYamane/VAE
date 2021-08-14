@@ -23,6 +23,8 @@ def plot_reconstructed_image(fig, images_ans, images_hat, col=4, epoch=0):
     channel = images_ans.shape[3]
     if channel == 1:
         cmap = 'gray'
+        images_ans = np.squeeze(images_ans)
+        images_hat = np.squeeze(images_hat)
 
     row = -(-len(images_ans) // col)
     for i, (image_ans, image_hat) in enumerate(zip(images_ans, images_hat)):
@@ -82,6 +84,7 @@ def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0):
     channel = images.shape[3]
     if channel == 1:
         cmap = 'gray'
+        images = np.squeeze(images)
 
     for i, image in enumerate(images):
         ax = fig.add_subplot(row, col, i + 1)
