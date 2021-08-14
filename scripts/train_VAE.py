@@ -18,6 +18,8 @@ sns.set()
 sys.path.append('.')
 sys.path.append('..')
 from scripts.VAE import VAE, VAELoss
+from scripts.image_dataset import ImageDataset
+from scripts.fastdataloader import FastDataLoader
 from scripts.plot_result import *
 
 
@@ -55,7 +57,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         running_loss_KL = 0.0
         running_loss_reconstruction = 0.0
         model.train()
-        for image, label in tqdm(train_loader):
+        for image, label in train_loader:
             image = image.to(device)
 
             with torch.cuda.amp.autocast():
@@ -82,6 +84,8 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         running_loss_reconstruction = 0.0
         valid_mean = []
         valid_label = []
+        valid_image_ans = []
+        valid_image_hat = []
         model.eval()
         for image, label in valid_loader:
             image = image.to(device)
@@ -97,12 +101,16 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             running_loss_reconstruction += loss_reconstruction.item()
             valid_mean.append(mean)
             valid_label.append(label)
+            valid_image_ans.append(image)
+            valid_image_hat.append(y)
         valid_loss = running_loss / len(valid_loader)
         valid_loss_KL = running_loss_KL / len(valid_loader)
         valid_loss_reconstruction = running_loss_reconstruction / len(valid_loader)
         valid_losses.append(valid_loss)
         valid_mean = torch.cat(valid_mean, dim=0)
         valid_label = torch.cat(valid_label, dim=0)
+        valid_image_ans = torch.cat(valid_image_ans, dim=0)
+        valid_image_hat = torch.cat(valid_image_hat, dim=0)
 
         end = time.time()
         elapsed_time = end - start
@@ -151,8 +159,8 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
 
         # show output
         if epoch % 10 == 0:
-            image_ans = formatImages(image)
-            image_hat = formatImages(y)
+            image_ans = formatImages(valid_image_ans)
+            image_hat = formatImages(valid_image_hat)
             fig_reconstructed_image.clf()
             plot_reconstructed_image(fig_reconstructed_image, image_ans, image_hat, col=10, epoch=epoch)
             path_reconstructed_image_png = os.path.join(out_dir, 'reconstructed_image.png')
@@ -241,6 +249,9 @@ def torchvision_dataset(dataset, image_size):
         valid_dataset = torchvision.datasets.CelebA(
             root='../datasets/celebA', split='valid',
             download=True, transform=transform)
+    else:
+        train_dataset = ImageDataset(dataset, train=True, image_size=image_size)
+        valid_dataset = ImageDataset(dataset, train=False, image_size=image_size)
 
     return train_dataset, valid_dataset
 
@@ -251,18 +262,20 @@ def main(args):
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=8,
+        num_workers=2,
         # pin_memory=True,
     )
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=8,
+        num_workers=2,
         # pin_memory=True,
     )
 
-    model = VAE(image_size=args.image_size)
+    image, label = train_dataset[0]
+    image_channel = image.shape[-3]
+    model = VAE(image_size=args.image_size, image_channel=image_channel)
 
     if not os.path.exists('results'):
         os.mkdir('results')

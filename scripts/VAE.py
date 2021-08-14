@@ -77,11 +77,11 @@ class Decoder(nn.Module):
 
 
 class VAE(nn.Module):
-    def __init__(self, z_dim=2, image_size=64):
+    def __init__(self, z_dim=2, image_size=64, image_channel=3):
         super().__init__()
 
-        # channels = [3, 8, 16, 32, 64, 128]
-        channels = [1, 8, 16, 32, 64]
+        channels = [image_channel, 8, 16, 32, 64, 128]
+        # channels = [1, 8, 16, 32, 64]
         self.encoder = Encoder(z_dim, image_size, channels)
         self.decoder = Decoder(z_dim, image_size, channels)
 
