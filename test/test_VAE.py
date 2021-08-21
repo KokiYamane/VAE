@@ -45,7 +45,7 @@ class TestVAE(unittest.TestCase):
             pin_memory=True,
         )
 
-        model = VAE(image_size=image_size)
+        model = VAE(image_size=image_size, label_dim=1)
         model.eval()
         print(model)
 
@@ -58,7 +58,8 @@ class TestVAE(unittest.TestCase):
 
         for image, label in tqdm(dataloader):
             image = image.to(device)
-            y, mean, std = model(image)
+            label = label.to(device)
+            y, mean, std = model(image, label)
             loss_KL, loss_reconstruction = loss_fn(image, y, mean, std)
             loss = loss_KL + loss_reconstruction
             loss.backward()

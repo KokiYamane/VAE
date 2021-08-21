@@ -31,7 +31,7 @@ class InvertedResidual(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, z_dim, image_size, channels):
+    def __init__(self, z_dim, image_size, channels, label_dim=0):
         super().__init__()
 
         conv_list = []
@@ -43,25 +43,29 @@ class Encoder(nn.Module):
 
         feature_size = image_size // 2**(len(channels)-1)
         feature_dim = channels[-1] * feature_size ** 2
+        feature_dim += label_dim
         self.dense_encmean = nn.Linear(feature_dim, z_dim)
         self.dense_encvar = nn.Linear(feature_dim, z_dim)
 
-    def forward(self, x):
+    def forward(self, x, label=None):
         x = self.conv(x)
+        if not label == None:
+            label = label.unsqueeze(1)
+            x = torch.cat([x, label], dim=1)
         mean = self.dense_encmean(x)
         std = F.relu(self.dense_encvar(x))
         return mean, std
 
 
 class Decoder(nn.Module):
-    def __init__(self, z_dim, image_size, channels):
+    def __init__(self, z_dim, image_size, channels, label_dim=0):
         super().__init__()
 
         self.channels = channels
 
         self.feature_size = image_size // 2**(len(channels)-1)
 
-        self.dense = nn.Linear(z_dim, channels[-1] * self.feature_size ** 2)
+        self.dense = nn.Linear(z_dim + label_dim, channels[-1] * self.feature_size ** 2)
 
         deconv_list = []
         for i in reversed(range(1, len(channels))):
@@ -70,20 +74,23 @@ class Decoder(nn.Module):
         deconv_list.append(nn.Sigmoid())
         self.deconv = nn.Sequential(*deconv_list)
 
-    def forward(self, z):
-        x = self.dense(z)
+    def forward(self, z, label=None):
+        if not label == None:
+            label = label.unsqueeze(1)
+            x = torch.cat([z, label], dim=1)
+        x = self.dense(x)
         x = x.reshape(x.shape[0], self.channels[-1], self.feature_size, self.feature_size)
         return self.deconv(x)
 
 
 class VAE(nn.Module):
-    def __init__(self, z_dim=2, image_size=64):
+    def __init__(self, z_dim=2, image_size=64, label_dim=0):
         super().__init__()
 
         # channels = [3, 8, 16, 32, 64, 128]
         channels = [1, 8, 16, 32, 64]
-        self.encoder = Encoder(z_dim, image_size, channels)
-        self.decoder = Decoder(z_dim, image_size, channels)
+        self.encoder = Encoder(z_dim, image_size, channels, label_dim)
+        self.decoder = Decoder(z_dim, image_size, channels, label_dim)
 
     def _sample_z(self, mean, std):
         epsilon = torch.randn(mean.shape).to(mean.device)
@@ -92,10 +99,10 @@ class VAE(nn.Module):
     def decode(self, z):
         return self.decoder(z)
 
-    def forward(self, x):
-        mean, std = self.encoder(x)
+    def forward(self, x, label=None):
+        mean, std = self.encoder(x, label)
         z = self._sample_z(mean, std)
-        y = self.decoder(z)
+        y = self.decoder(z, label)
         return y, mean, std
 
 

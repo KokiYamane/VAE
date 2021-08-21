@@ -23,7 +23,7 @@ from scripts.plot_result import *
 
 def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
               out_dir='', lr=0.001, optimizer_cls=optim.Adam,
-              wandb_flag=False, gpu_num=0):
+              wandb_flag=False, gpu_num=0, conditional=False):
     train_losses, valid_losses = [], []
     total_elapsed_time = 0
     best_test = 1e10
@@ -59,7 +59,10 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             image = image.to(device)
 
             with torch.cuda.amp.autocast():
-                y, mean, std = model(image)
+                if conditional:
+                    y, mean, std = model(image, label)
+                else:
+                    y, mean, std = model(image)
                 loss_KL, loss_reconstruction = loss_fn(image, y, mean, std)
 
             loss = loss_KL + loss_reconstruction
@@ -87,7 +90,10 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             image = image.to(device)
 
             with torch.cuda.amp.autocast():
-                y, mean, std = model(image)
+                if conditional:
+                    y, mean, std = model(image, label)
+                else:
+                    y, mean, std = model(image)
                 loss_KL, loss_reconstruction = loss_fn(image, y, mean, std)
 
             loss = loss_KL + loss_reconstruction
@@ -291,6 +297,7 @@ def main(args):
         lr=args.learning_rate,
         wandb_flag=args.wandb,
         gpu_num=args.gpu_num,
+        conditional=args.conditional
     )
 
 
@@ -305,6 +312,7 @@ def argparse():
     parser.add_argument('--wandb', action='store_true')
     tp = lambda x:list(map(int, x.split(',')))
     parser.add_argument('--gpu_num', type=tp, default='0')
+    parser.add_argument('--conditional', action='store_true')
     return parser.parse_args()
 
 
