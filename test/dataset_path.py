@@ -1,1 +1,1 @@
-datafolder = '../../IM2IM/sponge_touch/'
+datafolder = '../../datasets/sponge/'

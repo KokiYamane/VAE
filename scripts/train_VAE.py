@@ -303,15 +303,16 @@ def main(args):
 
     image, label = train_dataset[0]
     image_channel = image.shape[-3]
+    label_transform = lambda x: x
     if not args.conditional:
         label_dim = 0
-        label_transform = lambda x: x
     elif type(label) == int:
         label_dim = 10
         label_transform = to_one_hot(label_dim)
     else:
-        label_dim = len(label)
-        label_transform = lambda x: x
+        # label_dim = label.shape[0]
+        label_dim = 2
+        label_transform = to_one_hot(label_dim)
     model = VAE(image_size=args.image_size, image_channel=image_channel, label_dim=label_dim)
 
     if not os.path.exists('results'):

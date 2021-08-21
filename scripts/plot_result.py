@@ -45,14 +45,16 @@ def plot_reconstructed_image(fig, images_ans, images_hat, col=4, epoch=0):
 def plot_latent_space(fig, zs, labels, epoch=0):
     zs = torch2numpy(zs)
     labels = torch2numpy(labels)
+
+    if zs.shape[1] < 2:
+        pca = PCA()
+        pca.fit(zs)
+        zs = pca.transform(zs)
+    # zs = TSNE(n_components=2, random_state=0).fit_transform(zs)
+
     ax = fig.add_subplot(111)
-    pca = PCA()
-    pca.fit(zs)
-    points = pca.transform(zs)
-    # points = TSNE(n_components=2, random_state=0).fit_transform(zs)
-    # points = zs
-    im = ax.scatter(points[:, 0], points[:, 1], c=labels, cmap='jet', marker='.')
-    lim = np.max(np.abs(points)) * 1.1
+    im = ax.scatter(zs[:, 0], zs[:, 1], c=labels, cmap='jet', marker='.')
+    lim = np.max(np.abs(zs)) * 1.1
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
     from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -72,10 +74,11 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
     zeros = np.zeros(shape=(z.shape[0], z_sumple.shape[1] - z.shape[1]))
     z = np.concatenate([z, zeros], axis=1)
 
-    z_sumple = torch2numpy(z_sumple)
-    pca = PCA()
-    pca.fit(z_sumple)
-    z = pca.inverse_transform(z)
+    if z_sumple.shape[1] < 2:
+        z_sumple = torch2numpy(z_sumple)
+        pca = PCA()
+        pca.fit(z_sumple)
+        z = pca.inverse_transform(z)
     z = torch.from_numpy(z.astype(np.float32)).to(device)
 
     if not label == None:
@@ -84,7 +87,7 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
     else:
         label_transformed = None
 
-    images = model.decode(z, label_transformed)
+    images = model.decoder(z, label_transformed)
     images = formatImages(images)
 
     cmap = None

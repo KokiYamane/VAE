@@ -45,7 +45,8 @@ class Encoder(nn.Module):
         conv_list = []
         conv_list.append(nn.Dropout(0.01))
         for i in range(len(channels)-1):
-            conv_list.append(InvertedResidual(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2, expand_ratio=6))
+            conv_list.append(nn.Conv2d(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2))
+            # conv_list.append(InvertedResidual(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2, expand_ratio=6))
         conv_list.append(nn.Flatten())
         self.conv = nn.Sequential(*conv_list)
 
@@ -108,16 +109,13 @@ class VAE(nn.Module):
     def __init__(self, z_dim=2, image_size=64, image_channel=3, label_dim=0):
         super().__init__()
 
-        channels = [image_channel, 8, 16, 32, 64, 128]
+        channels = [image_channel, 8, 16, 32]
         self.encoder = Encoder(z_dim, image_size, channels, label_dim)
         self.decoder = Decoder(z_dim, image_size, channels, label_dim)
 
     def _sample_z(self, mean, std):
         epsilon = torch.randn(mean.shape).to(mean.device)
         return mean + std * epsilon
-
-    def decode(self, z, label=None):
-        return self.decoder(z, label)
 
     def forward(self, x, label=None):
         mean, std = self.encoder(x, label)
