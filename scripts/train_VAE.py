@@ -291,7 +291,9 @@ def main(args):
     image, label = train_dataset[0]
     image_channel = image.shape[-3]
     # label_dim = label
-    if type(label) == int:
+    if not args.conditional:
+        label_dim = 0
+    elif type(label) == int:
         label_dim = 1
     else:
         label_dim = len(label)
@@ -305,11 +307,15 @@ def main(args):
     if args.wandb:
         wandb.init(project='VAE')
         config = wandb.config
+
         config.data_path = args.data_path
         config.epoch = args.epoch
         config.batch_size = args.batch_size
         config.learning_rate = args.learning_rate
+        config.image_size = args.image_size
         config.gpu_num = args.gpu_num
+        config.conditional = args.conditional
+
         config.train_data_num = len(train_dataset)
         config.valid_data_num = len(valid_dataset)
         wandb.watch(model)
