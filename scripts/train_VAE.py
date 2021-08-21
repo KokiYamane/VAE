@@ -21,6 +21,7 @@ from scripts.VAE import VAE, VAELoss
 from scripts.image_dataset import ImageDataset
 from scripts.fastdataloader import FastDataLoader
 from scripts.plot_result import *
+from scripts.print_progress_bar import print_progress_bar
 
 
 def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
@@ -59,7 +60,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         running_loss_reconstruction = 0.0
         running_loss_KL = 0.0
         model.train()
-        for image, label in train_loader:
+        for i, (image, label) in enumerate(train_loader):
             image = image.to(device)
             label = label.to(device)
 
@@ -80,6 +81,10 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             running_loss += loss.item()
             running_loss_reconstruction += loss_reconstruction.item()
             running_loss_KL += loss_KL.item()
+
+            header = 'epoch: {}'.format(epoch)
+            print_progress_bar(i, len(train_loader), end='', header=header)
+
         train_loss = running_loss / len(train_loader)
         train_loss_reconstruction = running_loss_reconstruction / len(train_loader)
         train_loss_KL = running_loss_KL / len(train_loader)
@@ -129,7 +134,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         end = time.time()
         elapsed_time = end - start
         total_elapsed_time += elapsed_time
-        print('epoch: {} train loss: {} ({}, {}), vaild loss: {} ({}, {}), elapsed time: {:.3f}'.format(
+        print('\repoch: {} train loss: {} ({}, {}), vaild loss: {} ({}, {}), elapsed time: {:.3f}'.format(
             epoch, train_loss, train_loss_reconstruction, train_loss_KL,
             valid_loss, valid_loss_reconstruction, valid_loss_KL, elapsed_time))
 
