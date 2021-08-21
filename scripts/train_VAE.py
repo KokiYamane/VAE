@@ -140,7 +140,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         end = time.time()
         elapsed_time = end - start
         total_elapsed_time += elapsed_time
-        print('\repoch: {} train loss: {} ({}, {}), vaild loss: {} ({}, {}), elapsed time: {:.3f}'.format(
+        print('\r\033[K' + 'epoch: {} train loss: {} ({}, {}), vaild loss: {} ({}, {}), elapsed time: {:.3f}'.format(
             epoch, train_loss, train_loss_reconstruction, train_loss_KL,
             valid_loss, valid_loss_reconstruction, valid_loss_KL, elapsed_time))
 
@@ -305,6 +305,7 @@ def main(args):
     image_channel = image.shape[-3]
     if not args.conditional:
         label_dim = 0
+        label_transform = lambda x: x
     elif type(label) == int:
         label_dim = 10
         label_transform = to_one_hot(label_dim)
