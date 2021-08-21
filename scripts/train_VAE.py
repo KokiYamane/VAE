@@ -24,9 +24,13 @@ from scripts.plot_result import *
 from scripts.print_progress_bar import print_progress_bar
 
 
+def to_one_hot(n_class=10):
+    return lambda labels: torch.eye(n_class)[labels]
+
+
 def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
               out_dir='', lr=0.001, optimizer_cls=optim.Adam,
-              wandb_flag=False, gpu_num=0, conditional=False):
+              wandb_flag=False, gpu_num=0, conditional=False, label_transform=lambda x: x):
     train_losses, valid_losses = [], []
     train_losses_reconstruction, valid_losses_reconstruction = [], []
     train_losses_KL, valid_losses_KL = [], []
@@ -62,14 +66,15 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         model.train()
         for i, (image, label) in enumerate(train_loader):
             image = image.to(device)
-            label = label.to(device)
 
             with torch.cuda.amp.autocast():
                 if conditional:
-                    y, mean, std = model(image, label)
+                    label_one_hot = label_transform(label)
+                    label_one_hot = label_one_hot.to(device)
+                    y, mean, std = model(image, label_one_hot)
                 else:
                     y, mean, std = model(image)
-                loss_KL, loss_reconstruction = loss_fn(image, y, mean, std)
+                loss_reconstruction, loss_KL = loss_fn(image, y, mean, std)
 
             loss = loss_reconstruction + loss_KL
 
@@ -102,14 +107,15 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         model.eval()
         for image, label in valid_loader:
             image = image.to(device)
-            label = label.to(device)
 
             with torch.cuda.amp.autocast():
                 if conditional:
-                    y, mean, std = model(image, label)
+                    label_one_hot = label_transform(label)
+                    label_one_hot = label_one_hot.to(device)
+                    y, mean, std = model(image, label_one_hot)
                 else:
                     y, mean, std = model(image)
-                loss_KL, loss_reconstruction = loss_fn(image, y, mean, std)
+                loss_reconstruction, loss_KL = loss_fn(image, y, mean, std)
 
             loss = loss_reconstruction + loss_KL
 
@@ -192,8 +198,10 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
                 label = label[0]
             else:
                 label = None
-            plot_2D_Manifold(fig_2D_Manifold, model.module, device, z_sumple=valid_mean, col=10, epoch=epoch, label=label)
-            path_fig_2D_Manifold = os.path.join(out_dir, 'generated_image.png')
+            plot_2D_Manifold(fig_2D_Manifold, model.module, device,
+                             z_sumple=valid_mean, col=10, epoch=epoch,
+                             label=label, label_transform=label_transform)
+            path_fig_2D_Manifold = os.path.join(out_dir, '2D_Manifold.png')
             fig_2D_Manifold.savefig(path_fig_2D_Manifold)
 
             if wandb_flag:
@@ -295,13 +303,14 @@ def main(args):
 
     image, label = train_dataset[0]
     image_channel = image.shape[-3]
-    # label_dim = label
     if not args.conditional:
         label_dim = 0
     elif type(label) == int:
-        label_dim = 1
+        label_dim = 10
+        label_transform = to_one_hot(label_dim)
     else:
         label_dim = len(label)
+        label_transform = lambda x: x
     model = VAE(image_size=args.image_size, image_channel=image_channel, label_dim=label_dim)
 
     if not os.path.exists('results'):
@@ -335,7 +344,8 @@ def main(args):
         lr=args.learning_rate,
         wandb_flag=args.wandb,
         gpu_num=args.gpu_num,
-        conditional=args.conditional
+        conditional=args.conditional,
+        label_transform=label_transform,
     )
 
 

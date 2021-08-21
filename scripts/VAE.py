@@ -34,6 +34,14 @@ class Encoder(nn.Module):
     def __init__(self, z_dim, image_size, channels, label_dim=0):
         super().__init__()
 
+        self.image_size = image_size
+
+        if not label_dim == 0:
+            self.dense_label = nn.Linear(label_dim, image_size**2)
+            import copy
+            channels = copy.deepcopy(channels)
+            channels[0] += 1
+
         conv_list = []
         conv_list.append(nn.Dropout(0.01))
         for i in range(len(channels)-1):
@@ -43,15 +51,18 @@ class Encoder(nn.Module):
 
         feature_size = image_size // 2**(len(channels)-1)
         feature_dim = channels[-1] * feature_size ** 2
-        feature_dim += label_dim
+
         self.dense_encmean = nn.Linear(feature_dim, z_dim)
         self.dense_encvar = nn.Linear(feature_dim, z_dim)
 
     def forward(self, x, label=None):
-        x = self.conv(x)
         if not label == None:
-            label = label.unsqueeze(1)
-            x = torch.cat([x, label], dim=1)
+            if label.dim() == 1:
+                label = label.unsqueeze(1)
+            v = self.dense_label(label.float())
+            v = v.reshape(v.shape[0], 1, self.image_size, self.image_size)
+            x = torch.cat([x, v], dim=1)
+        x = self.conv(x)
         mean = self.dense_encmean(x)
         std = F.relu(self.dense_encvar(x))
         return mean, std
@@ -65,7 +76,12 @@ class Decoder(nn.Module):
 
         self.feature_size = image_size // 2**(len(channels)-1)
 
-        self.dense = nn.Linear(z_dim + label_dim, channels[-1] * self.feature_size ** 2)
+        if label_dim == 0:
+            self.dense = nn.Linear(z_dim, channels[-1] * self.feature_size ** 2)
+        else:
+            dim = channels[-1] // 2 * self.feature_size ** 2
+            self.dense = nn.Linear(z_dim, dim)
+            self.dense_label = nn.Linear(label_dim, dim)
 
         deconv_list = []
         for i in reversed(range(1, len(channels))):
@@ -75,11 +91,16 @@ class Decoder(nn.Module):
         self.deconv = nn.Sequential(*deconv_list)
 
     def forward(self, z, label=None):
-        if not label == None:
-            label = label.unsqueeze(1)
-            z = torch.cat([z, label], dim=1)
         x = self.dense(z)
-        x = x.reshape(x.shape[0], self.channels[-1], self.feature_size, self.feature_size)
+        if not label == None:
+            if label.dim() == 1:
+                label = label.unsqueeze(1)
+            v = self.dense_label(label.float())
+            x = x.reshape(x.shape[0], self.channels[-1]//2, self.feature_size, self.feature_size)
+            v = v.reshape(v.shape[0], self.channels[-1]//2, self.feature_size, self.feature_size)
+            x = torch.cat([x, v], dim=1)
+        else:
+            x = x.reshape(x.shape[0], self.channels[-1], self.feature_size, self.feature_size)
         return self.deconv(x)
 
 

@@ -62,7 +62,8 @@ def plot_latent_space(fig, zs, labels, epoch=0):
     ax.set_title('{} epoch'.format(epoch))
 
 
-def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0, label=None):
+def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
+                     label=None, label_transform=lambda x: x):
     row = col
 
     x = np.tile(np.linspace(-2, 2, col), row)
@@ -78,9 +79,12 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0, label=None):
     z = torch.from_numpy(z.astype(np.float32)).to(device)
 
     if not label == None:
-        label = label.tile((z.shape[0],))
+        label_transformed = label_transform(label)
+        label_transformed = label_transformed.repeat(z.shape[0], 1).to(device)
+    else:
+        label_transformed = None
 
-    images = model.decode(z, label)
+    images = model.decode(z, label_transformed)
     images = formatImages(images)
 
     cmap = None
@@ -94,7 +98,10 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0, label=None):
         ax.imshow(image, cmap=cmap)
         ax.axis('off')
 
-    fig.suptitle('{} epoch'.format(epoch))
+    suptitle = '{} epoch'.format(epoch)
+    if not label == None:
+        suptitle += '  label: {}'.format(label)
+    fig.suptitle(suptitle)
     fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95)
 
 
@@ -103,7 +110,9 @@ def plot_loss(ax, train_loss, valid_loss):
     ax.plot(valid_loss, label='valid')
     train_max = np.mean(train_loss) + 2 * np.std(train_loss)
     valid_max = np.mean(valid_loss) + 2 * np.std(valid_loss)
-    ax.set_ylim(0.9 * min(min(train_loss), min(valid_loss)), max(train_max, valid_max))
+    y_max = max(train_max, valid_max)
+    y_min = min(min(train_loss), min(valid_loss))
+    ax.set_ylim(0.9 * y_min, 1.1 * y_max)
     ax.set_yscale('log')
 
 
