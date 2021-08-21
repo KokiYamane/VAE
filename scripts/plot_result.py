@@ -23,6 +23,8 @@ def plot_reconstructed_image(fig, images_ans, images_hat, col=4, epoch=0):
     channel = images_ans.shape[3]
     if channel == 1:
         cmap = 'gray'
+        images_ans = np.squeeze(images_ans)
+        images_hat = np.squeeze(images_hat)
 
     row = -(-len(images_ans) // col)
     for i, (image_ans, image_hat) in enumerate(zip(images_ans, images_hat)):
@@ -82,6 +84,7 @@ def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0):
     channel = images.shape[3]
     if channel == 1:
         cmap = 'gray'
+        images = np.squeeze(images)
 
     for i, image in enumerate(images):
         ax = fig.add_subplot(row, col, i + 1)
@@ -90,3 +93,31 @@ def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0):
 
     fig.suptitle('{} epoch'.format(epoch))
     fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95)
+
+
+def plot_loss(ax, train_loss, valid_loss):
+    ax.plot(train_loss, label='train')
+    ax.plot(valid_loss, label='valid')
+    train_max = np.mean(train_loss) + 2 * np.std(train_loss)
+    valid_max = np.mean(valid_loss) + 2 * np.std(valid_loss)
+    ax.set_ylim(0.9 * min(min(train_loss), min(valid_loss)), max(train_max, valid_max))
+    ax.set_yscale('log')
+
+
+def plot_losses(fig, train_loss, valid_loss,
+                train_loss_reconstruction, valid_loss_reconstruction,
+                train_loss_KL, valid_loss_KL):
+    ax1 = fig.add_subplot(311)
+    plot_loss(ax1, train_loss, valid_loss)
+    ax1.set_ylabel('total loss')
+    ax1.tick_params(bottom=False, labelbottom=False)
+    ax1.legend()
+    ax2 = fig.add_subplot(312)
+    plot_loss(ax2, train_loss_reconstruction, valid_loss_reconstruction)
+    ax2.set_ylabel('reconstruction error')
+    ax2.tick_params(bottom=False, labelbottom=False)
+    ax3 = fig.add_subplot(313)
+    plot_loss(ax3, train_loss_KL, valid_loss_KL)
+    ax3.set_ylabel('KL divergence')
+    ax3.set_xlabel('epoch')
+    fig.align_labels()

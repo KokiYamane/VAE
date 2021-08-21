@@ -84,11 +84,10 @@ class Decoder(nn.Module):
 
 
 class VAE(nn.Module):
-    def __init__(self, z_dim=2, image_size=64, label_dim=0):
+    def __init__(self, z_dim=2, image_size=64, image_channel=3, label_dim=0):
         super().__init__()
 
-        # channels = [3, 8, 16, 32, 64, 128]
-        channels = [1, 8, 16, 32, 64]
+        channels = [image_channel, 8, 16, 32, 64, 128]
         self.encoder = Encoder(z_dim, image_size, channels, label_dim)
         self.decoder = Decoder(z_dim, image_size, channels, label_dim)
 
@@ -114,10 +113,10 @@ class VAELoss(nn.Module):
         return torch.log(torch.clamp(x, min=eps))
 
     def forward(self, x, y, mean, std):
-        # Kullback–Leibler divergence
-        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).sum(axis=1).mean()
-
         # Mean Squared Error
         reconstruction = ((x - y)**2).reshape(x.shape[0], -1).sum(axis=1).mean()
 
-        return KL, reconstruction
+        # Kullback–Leibler divergence
+        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).sum(axis=1).mean()
+
+        return reconstruction, KL
