@@ -49,7 +49,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     # figure
     fig_reconstructed_image = plt.figure(figsize=(20, 10))
     fig_latent_space = plt.figure(figsize=(10, 10))
-    fig_generated_image = plt.figure(figsize=(10, 10))
+    fig_2D_Manifold = plt.figure(figsize=(10, 10))
     fig_loss = plt.figure(figsize=(10, 10))
 
     for epoch in range(n_epochs + 1):
@@ -182,21 +182,21 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             path_latent_space = os.path.join(out_dir, 'latent_space.png')
             fig_latent_space.savefig(path_latent_space)
 
-            fig_generated_image.clf()
+            fig_2D_Manifold.clf()
             if conditional:
                 label = label[0]
             else:
                 label = None
-            plot_generated_image(fig_generated_image, model.module, device, z_sumple=valid_mean, col=10, epoch=epoch, label=label)
-            path_fig_generated_image = os.path.join(out_dir, 'generated_image.png')
-            fig_generated_image.savefig(path_fig_generated_image)
+            plot_2D_Manifold(fig_2D_Manifold, model.module, device, z_sumple=valid_mean, col=10, epoch=epoch, label=label)
+            path_fig_2D_Manifold = os.path.join(out_dir, 'generated_image.png')
+            fig_2D_Manifold.savefig(path_fig_2D_Manifold)
 
             if wandb_flag:
                 wandb.log({
                     'epoch': epoch,
                     'reconstructed_image': wandb.Image(fig_reconstructed_image),
                     'latent_space': wandb.Image(fig_latent_space),
-                    'generated_image': wandb.Image(fig_generated_image),
+                    '2D_Manifold': wandb.Image(fig_2D_Manifold),
                 })
 
         # wandb

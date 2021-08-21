@@ -67,8 +67,8 @@ class TestPlotResult(unittest.TestCase):
         model.eval()
 
         fig = plt.figure(figsize=(10, 10))
-        plot_generated_image(fig, model, z_sumple=zs, device='cpu')
-        plt.savefig(folder_name + '/test_generated_image.png')
+        plot_2D_Manifold(fig, model, z_sumple=zs, device='cpu')
+        plt.savefig(folder_name + '/test_2D_Manifold.png')
 
 
 if __name__ == "__main__":

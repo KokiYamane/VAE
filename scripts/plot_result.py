@@ -62,7 +62,7 @@ def plot_latent_space(fig, zs, labels, epoch=0):
     ax.set_title('{} epoch'.format(epoch))
 
 
-def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0, label=None):
+def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0, label=None):
     row = col
 
     x = np.tile(np.linspace(-2, 2, col), row)
