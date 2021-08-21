@@ -62,7 +62,7 @@ def plot_latent_space(fig, zs, labels, epoch=0):
     ax.set_title('{} epoch'.format(epoch))
 
 
-def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0):
+def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0, label=None):
     row = col
 
     x = np.tile(np.linspace(-2, 2, col), row)
@@ -77,7 +77,10 @@ def plot_generated_image(fig, model, device, z_sumple, col=10, epoch=0):
     z = pca.inverse_transform(z)
     z = torch.from_numpy(z.astype(np.float32)).to(device)
 
-    images = model.decode(z)
+    if not label == None:
+        label = label.tile((z.shape[0],))
+
+    images = model.decode(z, label)
     images = formatImages(images)
 
     cmap = None

@@ -61,6 +61,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         model.train()
         for image, label in train_loader:
             image = image.to(device)
+            label = label.to(device)
 
             with torch.cuda.amp.autocast():
                 if conditional:
@@ -96,6 +97,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         model.eval()
         for image, label in valid_loader:
             image = image.to(device)
+            label = label.to(device)
 
             with torch.cuda.amp.autocast():
                 if conditional:
@@ -181,7 +183,11 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             fig_latent_space.savefig(path_latent_space)
 
             fig_generated_image.clf()
-            plot_generated_image(fig_generated_image, model.module, device, z_sumple=valid_mean, col=10, epoch=epoch)
+            if conditional:
+                label = label[0]
+            else:
+                label = None
+            plot_generated_image(fig_generated_image, model.module, device, z_sumple=valid_mean, col=10, epoch=epoch, label=label)
             path_fig_generated_image = os.path.join(out_dir, 'generated_image.png')
             fig_generated_image.savefig(path_fig_generated_image)
 
@@ -223,7 +229,7 @@ def torchvision_dataset(dataset, image_size):
         valid_dataset = torchvision.datasets.MNIST(
             root='../datasets/mnist', train=False,
             download=True, transform=transform)
-    if dataset == 'emnist':
+    elif dataset == 'emnist':
         train_dataset = torchvision.datasets.EMNIST(
             root='../datasets/emnist', split='balanced', train=True,
             download=True, transform=transform)
@@ -284,7 +290,12 @@ def main(args):
 
     image, label = train_dataset[0]
     image_channel = image.shape[-3]
-    model = VAE(image_size=args.image_size, image_channel=image_channel)
+    # label_dim = label
+    if type(label) == int:
+        label_dim = 1
+    else:
+        label_dim = len(label)
+    model = VAE(image_size=args.image_size, image_channel=image_channel, label_dim=label_dim)
 
     if not os.path.exists('results'):
         os.mkdir('results')

@@ -17,7 +17,7 @@ class TestVAE(unittest.TestCase):
     def test_VAE(self):
         print('\n========== test VAE model ==========')
 
-        image_size = 96
+        image_size = 32
 
         transform = transforms.Compose([
             transforms.ToTensor(),
@@ -45,7 +45,9 @@ class TestVAE(unittest.TestCase):
             pin_memory=True,
         )
 
-        model = VAE(image_size=image_size, label_dim=1)
+        image, label = dataset[0]
+        image_channel = image.shape[-3]
+        model = VAE(image_size=image_size, image_channel=image_channel, label_dim=1)
         model.eval()
         print(model)
 
@@ -65,6 +67,10 @@ class TestVAE(unittest.TestCase):
             loss.backward()
         print('loss_KL:', loss_KL.item())
         print('loss_reconstruction:', loss_reconstruction.item())
+
+        z = torch.randn(size=(10, 2)).to(device)
+        label = torch.zeros(size=(10,)).to(device)
+        images = model.decode(z, label)
 
 
 if __name__ == "__main__":

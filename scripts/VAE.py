@@ -77,8 +77,8 @@ class Decoder(nn.Module):
     def forward(self, z, label=None):
         if not label == None:
             label = label.unsqueeze(1)
-            x = torch.cat([z, label], dim=1)
-        x = self.dense(x)
+            z = torch.cat([z, label], dim=1)
+        x = self.dense(z)
         x = x.reshape(x.shape[0], self.channels[-1], self.feature_size, self.feature_size)
         return self.deconv(x)
 
@@ -95,8 +95,8 @@ class VAE(nn.Module):
         epsilon = torch.randn(mean.shape).to(mean.device)
         return mean + std * epsilon
 
-    def decode(self, z):
-        return self.decoder(z)
+    def decode(self, z, label=None):
+        return self.decoder(z, label)
 
     def forward(self, x, label=None):
         mean, std = self.encoder(x, label)
