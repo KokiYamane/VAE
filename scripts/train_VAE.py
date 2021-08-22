@@ -313,7 +313,7 @@ def main(args):
         # label_dim = label.shape[0]
         label_dim = 2
         label_transform = to_one_hot(label_dim)
-    model = VAE(image_size=args.image_size, image_channel=image_channel, label_dim=label_dim)
+    model = VAE(z_dim=5, image_size=args.image_size, image_channel=image_channel, label_dim=label_dim)
 
     if not os.path.exists('results'):
         os.mkdir('results')

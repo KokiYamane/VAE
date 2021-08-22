@@ -55,7 +55,14 @@ class ImageDataset(Dataset):
         return len(self.image)
 
     def __getitem__(self, idx):
-        return self.image[idx], self.label[idx]
+        image = self.image[idx]
+
+        # brightness data augmentation
+        bias = 0.2 * torch.randn(1)
+        image = image + bias
+        image = image.clip(0, 1)
+
+        return image, self.label[idx]
 
     def _crop_center(self, pil_img, crop_width, crop_height):
         img_width, img_height = pil_img.size
