@@ -31,7 +31,7 @@ class TestVAE(unittest.TestCase):
         #     download=True,
         # )
         dataset = torchvision.datasets.MNIST(
-            root='../datasets/MNIST',
+            root='../../datasets/MNIST',
             train=False,
             transform=transform,
             download=True,
@@ -47,7 +47,7 @@ class TestVAE(unittest.TestCase):
 
         image, label = dataset[0]
         image_channel = image.shape[-3]
-        model = VAE(image_size=image_size, image_channel=image_channel, label_dim=1)
+        model = VAE(image_size=image_size, image_channel=image_channel, label_dim=10)
         model.eval()
         print(model)
 
@@ -60,6 +60,7 @@ class TestVAE(unittest.TestCase):
 
         for image, label in tqdm(dataloader):
             image = image.to(device)
+            label = torch.eye(10)[label]
             label = label.to(device)
             y, mean, std = model(image, label)
             loss_KL, loss_reconstruction = loss_fn(image, y, mean, std)
@@ -69,8 +70,10 @@ class TestVAE(unittest.TestCase):
         print('loss_reconstruction:', loss_reconstruction.item())
 
         z = torch.randn(size=(10, 2)).to(device)
-        label = torch.zeros(size=(10,)).to(device)
-        images = model.decode(z, label)
+        label = torch.zeros(size=(10,), dtype=torch.int64)
+        label = torch.eye(10)[label]
+        label = label.to(device)
+        images = model.decoder(z, image_size=128, label=label)
 
 
 if __name__ == "__main__":

@@ -59,6 +59,8 @@ class ImageDataset(Dataset):
 
         # brightness data augmentation
         bias = 0.2 * torch.randn(1)
+        mean = image.mean()
+        bias = bias.clip(0.2 - mean, 0.8 - mean)
         image = image + bias
         image = image.clip(0, 1)
 

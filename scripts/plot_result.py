@@ -22,7 +22,8 @@ def plot_reconstructed_image(fig, images_ans, images_hat, col=4, epoch=0):
     cmap = None
     channel = images_ans.shape[3]
     if channel == 1:
-        cmap = 'gray'
+        # cmap = 'gray'
+        cmap = 'binary'
         images_ans = np.squeeze(images_ans)
         images_hat = np.squeeze(images_hat)
 
@@ -87,13 +88,14 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
     else:
         label_transformed = None
 
-    images = model.decoder(z, label_transformed)
+    images = model.decoder(z, image_size=64, label=label_transformed)
     images = formatImages(images)
 
     cmap = None
     channel = images.shape[3]
     if channel == 1:
-        cmap = 'gray'
+        # cmap = 'gray'
+        cmap = 'binary'
         images = np.squeeze(images)
 
     for i, image in enumerate(images):
@@ -109,8 +111,8 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
 
 
 def plot_loss(ax, train_loss, valid_loss):
-    ax.plot(train_loss, label='train')
-    ax.plot(valid_loss, label='valid')
+    ax.plot(train_loss, label='train', alpha=0.8)
+    ax.plot(valid_loss, label='valid', alpha=0.8)
     train_max = np.mean(train_loss) + 2 * np.std(train_loss)
     valid_max = np.mean(valid_loss) + 2 * np.std(valid_loss)
     y_max = max(train_max, valid_max)
