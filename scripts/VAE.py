@@ -46,8 +46,8 @@ class Encoder(nn.Module):
         conv_list = []
         conv_list.append(nn.Dropout(0.01))
         for i in range(len(channels)-1):
-            conv_list.append(nn.Conv2d(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2))
-            # conv_list.append(InvertedResidual(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2, expand_ratio=6))
+            # conv_list.append(nn.Conv2d(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2))
+            conv_list.append(InvertedResidual(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2, expand_ratio=6))
         conv_list.append(nn.Flatten())
         self.conv = nn.Sequential(*conv_list)
 
@@ -79,7 +79,7 @@ class Decoder(nn.Module):
             self.dense_label = nn.Linear(label_dim, z_dim)
             input_dim += z_dim
 
-        units = [input_dim, 100, 100, 100, channel]
+        units = [input_dim, 128, 256, 128, channel]
         layer_list = []
         for i in range(0, len(units)-1):
             layer_list.append(nn.Linear(units[i], units[i+1]))

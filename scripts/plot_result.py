@@ -47,7 +47,7 @@ def plot_latent_space(fig, zs, labels, epoch=0):
     zs = torch2numpy(zs)
     labels = torch2numpy(labels)
 
-    if zs.shape[1] < 2:
+    if zs.shape[1] > 2:
         pca = PCA()
         pca.fit(zs)
         zs = pca.transform(zs)
@@ -75,7 +75,7 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
     zeros = np.zeros(shape=(z.shape[0], z_sumple.shape[1] - z.shape[1]))
     z = np.concatenate([z, zeros], axis=1)
 
-    if z_sumple.shape[1] < 2:
+    if z_sumple.shape[1] > 2:
         z_sumple = torch2numpy(z_sumple)
         pca = PCA()
         pca.fit(z_sumple)
@@ -138,3 +138,40 @@ def plot_losses(fig, train_loss, valid_loss,
     ax3.set_ylabel('KL divergence')
     ax3.set_xlabel('epoch')
     fig.align_labels()
+
+
+def plot_latent_traversal(fig, model, device, row, col=10, epoch=0,
+                          label=None, label_transform=lambda x: x):
+    gradation = np.linspace(-2, 2, col)
+    z = np.zeros(shape=(row, col, row))
+    for i in range(row):
+        z[i, :, i] = gradation
+    z = z.reshape(-1, row)
+    z = torch.from_numpy(z.astype(np.float32)).to(device)
+
+    if not label == None:
+        label_transformed = label_transform(label)
+        label_transformed = label_transformed.repeat(z.shape[0], 1).to(device)
+    else:
+        label_transformed = None
+
+    images = model.decoder(z, image_size=64, label=label_transformed)
+    images = formatImages(images)
+
+    cmap = None
+    channel = images.shape[3]
+    if channel == 1:
+        # cmap = 'gray'
+        cmap = 'binary'
+        images = np.squeeze(images)
+
+    for i, image in enumerate(images):
+        ax = fig.add_subplot(row, col, i + 1)
+        ax.imshow(image, cmap=cmap)
+        ax.axis('off')
+
+    suptitle = '{} epoch'.format(epoch)
+    if not label == None:
+        suptitle += '  label: {}'.format(label)
+    fig.suptitle(suptitle)
+    fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95)

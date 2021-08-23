@@ -55,6 +55,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     fig_reconstructed_image = plt.figure(figsize=(20, 10))
     fig_latent_space = plt.figure(figsize=(10, 10))
     fig_2D_Manifold = plt.figure(figsize=(10, 10))
+    fig_latent_traversal = plt.figure(figsize=(10, 10))
     fig_loss = plt.figure(figsize=(10, 10))
 
     for epoch in range(n_epochs + 1):
@@ -204,12 +205,19 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             path_fig_2D_Manifold = os.path.join(out_dir, '2D_Manifold.png')
             fig_2D_Manifold.savefig(path_fig_2D_Manifold)
 
+            plot_latent_traversal(fig_latent_traversal, model.module, device,
+                                  row=valid_mean.shape[1], col=10, epoch=epoch,
+                                  label=label, label_transform=label_transform)
+            path_fig_latent_traversal = os.path.join(out_dir, 'latent_traversal.png')
+            fig_latent_traversal.savefig(path_fig_latent_traversal)
+
             if wandb_flag:
                 wandb.log({
                     'epoch': epoch,
                     'reconstructed_image': wandb.Image(fig_reconstructed_image),
                     'latent_space': wandb.Image(fig_latent_space),
                     '2D_Manifold': wandb.Image(fig_2D_Manifold),
+                    'latent_traversal': wandb.Image(fig_latent_traversal),
                 })
 
         # wandb
@@ -321,6 +329,8 @@ def main(args):
 
     if args.wandb:
         wandb.init(project='VAE')
+        wandb.watch(model)
+
         config = wandb.config
 
         config.data_path = args.data_path
@@ -333,7 +343,6 @@ def main(args):
 
         config.train_data_num = len(train_dataset)
         config.valid_data_num = len(valid_dataset)
-        wandb.watch(model)
 
     train_VAE(
         n_epochs=args.epoch,
