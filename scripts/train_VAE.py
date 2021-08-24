@@ -10,7 +10,6 @@ import torch.optim as optim
 import torchvision
 from torchvision import transforms
 
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
@@ -19,7 +18,6 @@ sys.path.append('.')
 sys.path.append('..')
 from scripts.VAE import VAE, VAELoss
 from scripts.image_dataset import ImageDataset
-from scripts.fastdataloader import FastDataLoader
 from scripts.plot_result import *
 from scripts.print_progress_bar import print_progress_bar
 
@@ -103,8 +101,8 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         running_loss_KL = 0.0
         valid_mean = []
         valid_label = []
-        valid_image_ans = []
-        valid_image_hat = []
+        # valid_image_ans = []
+        # valid_image_hat = []
         model.eval()
         for image, label in valid_loader:
             image = image.to(device)
@@ -123,10 +121,11 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             running_loss += loss.item()
             running_loss_reconstruction += loss_reconstruction.item()
             running_loss_KL += loss_KL.item()
-            valid_mean.append(mean)
-            valid_label.append(label)
-            valid_image_ans.append(image)
-            valid_image_hat.append(y)
+            if len(valid_mean) * mean.shape[0] < 1000:
+                valid_mean.append(mean)
+                valid_label.append(label)
+            # valid_image_ans.append(image)
+            # valid_image_hat.append(y)
         valid_loss = running_loss / len(valid_loader)
         valid_loss_reconstruction = running_loss_reconstruction / len(valid_loader)
         valid_loss_KL = running_loss_KL / len(valid_loader)
@@ -135,8 +134,10 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         valid_losses_KL.append(valid_loss_KL)
         valid_mean = torch.cat(valid_mean, dim=0)
         valid_label = torch.cat(valid_label, dim=0)
-        valid_image_ans = torch.cat(valid_image_ans, dim=0)
-        valid_image_hat = torch.cat(valid_image_hat, dim=0)
+        # valid_image_ans = torch.cat(valid_image_ans, dim=0)
+        # valid_image_hat = torch.cat(valid_image_hat, dim=0)
+        # valid_mean = mean
+        # valid_label = label
 
         end = time.time()
         elapsed_time = end - start
@@ -182,8 +183,10 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
 
         # show output
         if epoch % 10 == 0:
-            image_ans = formatImages(valid_image_ans)
-            image_hat = formatImages(valid_image_hat)
+            # image_ans = formatImages(valid_image_ans)
+            # image_hat = formatImages(valid_image_hat)
+            image_ans = formatImages(image)
+            image_hat = formatImages(y)
             fig_reconstructed_image.clf()
             plot_reconstructed_image(fig_reconstructed_image, image_ans, image_hat, col=10, epoch=epoch)
             path_reconstructed_image_png = os.path.join(out_dir, 'reconstructed_image.png')
@@ -240,9 +243,10 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
 def torchvision_dataset(dataset, image_size):
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Resize(image_size),
+        transforms.Resize((image_size, image_size)),
     ])
 
+    label_dim = 10
     if dataset == 'mnist':
         train_dataset = torchvision.datasets.MNIST(
             root='../datasets/mnist', train=True,
@@ -280,20 +284,21 @@ def torchvision_dataset(dataset, image_size):
             download=True, transform=transform)
     elif dataset == 'celebA':
         train_dataset = torchvision.datasets.CelebA(
-            root='../datasets/celebA', split='train',
+            root='../datasets/celebA', split='train', target_type='identity',
             download=True, transform=transform)
         valid_dataset = torchvision.datasets.CelebA(
-            root='../datasets/celebA', split='valid',
+            root='../datasets/celebA', split='valid', target_type='identity',
             download=True, transform=transform)
     else:
         train_dataset = ImageDataset(dataset, train=True, image_size=image_size)
         valid_dataset = ImageDataset(dataset, train=False, image_size=image_size)
+        label_dim = train_dataset.label_dim
 
-    return train_dataset, valid_dataset
+    return train_dataset, valid_dataset, label_dim
 
 
 def main(args):
-    train_dataset, valid_dataset = torchvision_dataset(args.data_path, image_size=args.image_size)
+    train_dataset, valid_dataset, label_dim = torchvision_dataset(args.data_path, image_size=args.image_size)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -307,19 +312,16 @@ def main(args):
         shuffle=True,
         num_workers=2,
         # pin_memory=True,
+        drop_last=True,
     )
 
     image, label = train_dataset[0]
     image_channel = image.shape[-3]
     label_transform = lambda x: x
-    if not args.conditional:
-        label_dim = 0
-    elif type(label) == int:
-        label_dim = 10
+    if args.conditional:
         label_transform = to_one_hot(label_dim)
     else:
-        label_dim = 2
-        label_transform = to_one_hot(label_dim)
+        label_dim = 0
     model = VAE(z_dim=5, image_size=args.image_size, image_channel=image_channel, label_dim=label_dim)
 
     if not os.path.exists('results'):

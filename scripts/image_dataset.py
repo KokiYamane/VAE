@@ -38,6 +38,8 @@ class ImageDataset(Dataset):
                 image_list.extend(image)
                 label_list.extend([i] * len(image))
 
+        self.label_dim = i + 1
+
         self.image = np.array(image_list).astype(np.float32)
 
         print('image data size: {} [MiB]'.format(self.image.__sizeof__()/1.049e+6))

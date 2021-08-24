@@ -38,10 +38,11 @@ class Encoder(nn.Module):
         self.image_size = image_size
 
         if label_dim != 0:
-            self.dense_label = nn.Linear(label_dim, image_size**2)
+            label_vec_dim = 2
+            self.dense_label = nn.Linear(label_dim, label_vec_dim)
             import copy
             channels = copy.deepcopy(channels)
-            channels[0] += 1
+            channels[0] += label_vec_dim
 
         conv_list = []
         conv_list.append(nn.Dropout(0.01))
@@ -62,7 +63,8 @@ class Encoder(nn.Module):
             if label.dim() == 1:
                 label = label.unsqueeze(1)
             v = self.dense_label(label.float())
-            v = v.reshape(v.shape[0], 1, self.image_size, self.image_size)
+            v = v.repeat(self.image_size, self.image_size, 1, 1)
+            v = v.reshape(x.shape[0], -1, self.image_size, self.image_size)
             x = torch.cat([x, v], dim=1)
         x = self.conv(x)
         mean = self.dense_encmean(x)
@@ -76,8 +78,9 @@ class Decoder(nn.Module):
 
         input_dim = 2 + z_dim
         if label_dim != 0:
-            self.dense_label = nn.Linear(label_dim, z_dim)
-            input_dim += z_dim
+            label_vec_dim = 2
+            self.dense_label = nn.Linear(label_dim, label_vec_dim)
+            input_dim += label_vec_dim
 
         units = [input_dim, 128, 256, 128, channel]
         layer_list = []
@@ -115,7 +118,7 @@ class VAE(nn.Module):
 
         self.image_size = image_size
 
-        channels = [image_channel, 8, 16, 32]
+        channels = [image_channel, 8, 16, 32, 64, 128]
         self.encoder = Encoder(z_dim, image_size, channels, label_dim)
         self.decoder = Decoder(z_dim, image_channel, label_dim)
 
