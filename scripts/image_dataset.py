@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 import glob
 from tqdm import tqdm
 import numpy as np
@@ -12,27 +13,28 @@ import re
 class ImageDataset(Dataset):
     def __init__(self, datafolder, data_num=None, train=True, split_ratio=0.8, image_size=64):
         self.image_size = image_size
+        self.transform = transforms.Compose([
+            transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
+        ])
+
         image_list = []
         label_list = []
 
         folders = glob.glob('{}/*'.format(datafolder))
         for i, folder in enumerate(folders):
-            paths = glob.glob('{}/motion/*.csv'.format(folder))
-            filenames = [os.path.splitext(os.path.basename(path))[0] for path in paths]
-            filenums = [int(re.sub(r"\D", "", filename)) for filename in filenames]
+            paths = glob.glob('{}/color/*'.format(folder))
 
-            train_data_num = int(split_ratio * len(filenums))
+            train_data_num = int(split_ratio * len(paths))
             if train:
-                filenums = filenums[:train_data_num]
+                paths = paths[:train_data_num]
             else:
-                filenums = filenums[train_data_num:]
+                paths = paths[train_data_num:]
 
-            if data_num != None and data_num < len(filenums):
-                filenums = filenums[:data_num]
+            if data_num != None and data_num < len(paths):
+                paths = paths[:data_num]
 
-            print('loading {} data'.format(len(filenums)))
-            for filenum in tqdm(filenums):
-                image_folder_path = '{}/color/video_rgb{}'.format(folder, filenum)
+            print('loading {} data'.format(len(paths)))
+            for image_folder_path in tqdm(paths):
                 image_paths = glob.glob(os.path.join(image_folder_path, '*.jpg'))
                 image = self._load_images(image_paths)
                 image_list.extend(image)
@@ -40,49 +42,35 @@ class ImageDataset(Dataset):
 
         self.label_dim = i + 1
 
-        self.image = np.array(image_list).astype(np.float32)
-
-        print('image data size: {} [MiB]'.format(self.image.__sizeof__()/1.049e+6))
-
-        self.image = self.image.transpose(0, 3, 1, 2)
-        self.image = self.image / 256
-
-        self.image = torch.from_numpy(self.image)
+        self.image = torch.stack(image_list).squeeze()
         self.label = torch.tensor(label_list)
 
         print('image shape:', self.image.shape)
         print('label shape:', self.label.shape)
+        print('image data size: {} [MiB]'.format(self.image.detach().numpy().copy().__sizeof__()/1.049e+6))
+        print('label data size: {} [MiB]'.format(self.label.detach().numpy().copy().__sizeof__()/1.049e+6))
 
     def __len__(self):
         return len(self.image)
 
     def __getitem__(self, idx):
         image = self.image[idx]
-
-        # brightness data augmentation
-        bias = 0.2 * torch.randn(1)
-        mean = image.mean()
-        bias = bias.clip(0.2 - mean, 0.8 - mean)
-        image = image + bias
-        image = image.clip(0, 1)
-
+        image = self.transform(image)
         return image, self.label[idx]
 
-    def _crop_center(self, pil_img, crop_width, crop_height):
-        img_width, img_height = pil_img.size
-        return pil_img.crop(((img_width - crop_width) // 2,
-                            (img_height - crop_height) // 2,
-                            (img_width + crop_width) // 2,
-                            (img_height + crop_height) // 2))
-
     def _load_images(self, image_paths):
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Resize(self.image_size),
+            transforms.CenterCrop(self.image_size),
+        ])
+
         def load_one_frame(idx):
             if not os.path.exists(image_paths[idx]):
                 return
             image = Image.open(image_paths[idx])
-            image = self._crop_center(image, min(image.size), min(image.size))
-            image = image.resize((self.image_size, self.image_size))
-            return idx, np.array(image)
+            image = transform(image)
+            return idx, image
 
         image_list = []
         length = len(image_paths)
@@ -95,4 +83,4 @@ class ImageDataset(Dataset):
             for future in futures.as_completed(future_images):
                 idx, image = future.result()
                 image_list[idx] = image
-        return image_list
+        return torch.stack(image_list)

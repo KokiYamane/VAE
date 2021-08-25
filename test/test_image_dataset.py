@@ -1,7 +1,7 @@
 import unittest
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import torch
+import time
 
 import sys
 sys.path.append('.')
@@ -14,7 +14,7 @@ from dataset_path import datafolder
 class TestImageDataset(unittest.TestCase):
     def test_dataset(self):
         print('\n========== test fast dataset and fast data loader ==========')
-        dataset = ImageDataset(datafolder, data_num=50)
+        dataset = ImageDataset(datafolder, data_num=50, image_size=128)
         print('data length:', len(dataset))
         dataloader = FastDataLoader(
             dataset,
@@ -23,23 +23,30 @@ class TestImageDataset(unittest.TestCase):
         )
         print('\n---------- my data loader test ----------')
         for e in range(3):
+            start = time.time()
             for i, (image, label) in enumerate(tqdm(dataloader)):
                 pass
                 # print('#', i)
                 # print('shape:', image.shape)
+            end = time.time()
+            print('elapsed time:', end - start)
 
         torchdataloader = DataLoader(
             dataset,
             batch_size=256,
             shuffle=True,
-            pin_memory=True,
+            num_workers=8,
+            # pin_memory=True,
         )
         print('\n---------- pytorch data loader test ----------')
         for e in range(3):
+            start = time.time()
             for i, (image, label) in enumerate(tqdm(torchdataloader)):
                 pass
                 # print('#', i)
                 # print('shape:', image.shape)
+            end = time.time()
+            print('elapsed time:', end - start)
 
 
 if __name__ == "__main__":

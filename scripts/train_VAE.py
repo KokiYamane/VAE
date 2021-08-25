@@ -183,8 +183,6 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
 
         # show output
         if epoch % 10 == 0:
-            # image_ans = formatImages(valid_image_ans)
-            # image_hat = formatImages(valid_image_hat)
             image_ans = formatImages(image)
             image_hat = formatImages(y)
             fig_reconstructed_image.clf()
@@ -208,6 +206,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             path_fig_2D_Manifold = os.path.join(out_dir, '2D_Manifold.png')
             fig_2D_Manifold.savefig(path_fig_2D_Manifold)
 
+            fig_latent_traversal.clf()
             plot_latent_traversal(fig_latent_traversal, model.module, device,
                                   row=valid_mean.shape[1], col=10, epoch=epoch,
                                   label=label, label_transform=label_transform)
@@ -303,14 +302,14 @@ def main(args):
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=2,
+        num_workers=8,
         # pin_memory=True,
     )
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=2,
+        num_workers=8,
         # pin_memory=True,
         drop_last=True,
     )

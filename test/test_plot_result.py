@@ -15,6 +15,8 @@ sys.path.append('.')
 sys.path.append('..')
 from scripts.VAE import VAE
 from scripts.plot_result import *
+from scripts.image_dataset import ImageDataset
+from dataset_path import datafolder
 
 
 class TestPlotResult(unittest.TestCase):
@@ -23,17 +25,18 @@ class TestPlotResult(unittest.TestCase):
 
         image_size = 96
 
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Resize(image_size),
-        ])
+        # transform = transforms.Compose([
+        #     transforms.ToTensor(),
+        #     transforms.Resize(image_size),
+        # ])
 
-        dataset = torchvision.datasets.MNIST(
-            root='../datasets/MNIST',
-            train=False,
-            transform=transform,
-            download=True,
-        )
+        # dataset = torchvision.datasets.MNIST(
+        #     root='../datasets/MNIST',
+        #     train=False,
+        #     transform=transform,
+        #     download=True,
+        # )
+        dataset = ImageDataset(datafolder, data_num=50, image_size=image_size)
 
         dataloader = torch.utils.data.DataLoader(
             dataset,
