@@ -203,11 +203,12 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             else:
                 label = None
             plot_2D_Manifold(fig_2D_Manifold, model.module, device,
-                             z_sumple=valid_mean, col=10, epoch=epoch,
+                             z_sumple=valid_mean, col=20, epoch=epoch,
                              label=label, label_transform=label_transform)
             path_fig_2D_Manifold = os.path.join(out_dir, '2D_Manifold.png')
             fig_2D_Manifold.savefig(path_fig_2D_Manifold)
 
+            fig_latent_traversal.clf()
             plot_latent_traversal(fig_latent_traversal, model.module, device,
                                   row=valid_mean.shape[1], col=10, epoch=epoch,
                                   label=label, label_transform=label_transform)

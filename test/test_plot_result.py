@@ -21,7 +21,7 @@ class TestPlotResult(unittest.TestCase):
     def test_plot_result(self):
         print('\n========== test plot result ==========')
 
-        image_size = 96
+        image_size = 32
 
         transform = transforms.Compose([
             transforms.ToTensor(),
@@ -29,7 +29,7 @@ class TestPlotResult(unittest.TestCase):
         ])
 
         dataset = torchvision.datasets.MNIST(
-            root='../datasets/MNIST',
+            root='../../datasets/MNIST',
             train=False,
             transform=transform,
             download=True,
@@ -69,6 +69,10 @@ class TestPlotResult(unittest.TestCase):
         fig = plt.figure(figsize=(10, 10))
         plot_2D_Manifold(fig, model, z_sumple=zs, device='cpu')
         plt.savefig(folder_name + '/test_2D_Manifold.png')
+
+        fig = plt.figure(figsize=(10, 10))
+        plot_latent_traversal(fig, model, row=z_dim, device='cpu')
+        plt.savefig(folder_name + '/test_latent_traversal.png')
 
 
 if __name__ == "__main__":
