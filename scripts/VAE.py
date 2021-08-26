@@ -134,24 +134,24 @@ class VAE(nn.Module):
 
 
 class VAELoss(nn.Module):
-    def __init__(self):
+    def __init__(self, weight_mse=100.0, weight_ssim=10.0):
         super().__init__()
 
-        self.ssim = SSIMLoss()
+        self.weight_mse = weight_mse
+        self.weight_ssim = weight_ssim
+        self.ssim_loss = SSIMLoss()
 
     def _torch_log(self, x, eps=1e-10):
         return torch.log(torch.clamp(x, min=eps))
 
     def forward(self, x, y, mean, std):
         # Mean Squared Error
-        weight_mse = 100
-        reconstruction = weight_mse * F.mse_loss(x, y)
+        mse = self.weight_mse * F.mse_loss(x, y)
 
         # Structural Similarity
-        weight_ssim = 1
-        reconstruction += weight_ssim * self.ssim(x, y)
+        ssim = self.weight_ssim * self.ssim_loss(x, y)
 
         # Kullback–Leibler divergence
-        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).mean()
+        kld = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).mean()
 
-        return reconstruction, KL
+        return mse, ssim, kld

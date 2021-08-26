@@ -30,8 +30,9 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
               out_dir='', lr=0.001, optimizer_cls=optim.Adam,
               wandb_flag=False, gpu_num=0, conditional=False, label_transform=lambda x: x):
     train_losses, valid_losses = [], []
-    train_losses_reconstruction, valid_losses_reconstruction = [], []
-    train_losses_KL, valid_losses_KL = [], []
+    train_losses_mse, valid_losses_mse = [], []
+    train_losses_ssim, valid_losses_ssim = [], []
+    train_losses_kl, valid_losses_kl = [], []
     total_elapsed_time = 0
     best_test = 1e10
     optimizer = optimizer_cls(model.parameters(), lr=lr)
@@ -39,11 +40,9 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     # device setting
     device = torch.device('cuda:{}'.format(gpu_num[0]) if torch.cuda.is_available() else 'cpu')
     print('device:', device)
-    # if torch.cuda.device_count() > 1:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
     model = nn.DataParallel(model, device_ids=gpu_num)
     model.to(device)
-    # print(model.module)
 
     # acceleration
     scaler = torch.cuda.amp.GradScaler()
@@ -60,8 +59,9 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         start = time.time()
 
         running_loss = 0.0
-        running_loss_reconstruction = 0.0
-        running_loss_KL = 0.0
+        running_loss_mse = 0.0
+        running_loss_ssim = 0.0
+        running_loss_kl = 0.0
         model.train()
         for i, (image, label) in enumerate(train_loader):
             image = image.to(device)
@@ -73,9 +73,9 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
                     y, mean, std = model(image, label_one_hot)
                 else:
                     y, mean, std = model(image)
-                loss_reconstruction, loss_KL = loss_fn(image, y, mean, std)
+                loss_mse, loss_ssim, loss_kl = loss_fn(image, y, mean, std)
 
-            loss = loss_reconstruction + loss_KL
+            loss = loss_mse + loss_ssim + loss_kl
 
             optimizer.zero_grad()
             scaler.scale(loss).backward()
@@ -83,26 +83,28 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             scaler.update()
 
             running_loss += loss.item()
-            running_loss_reconstruction += loss_reconstruction.item()
-            running_loss_KL += loss_KL.item()
+            running_loss_mse += loss_mse.item()
+            running_loss_ssim += loss_ssim.item()
+            running_loss_kl += loss_kl.item()
 
             header = 'epoch: {}'.format(epoch)
             print_progress_bar(i, len(train_loader), end='', header=header)
 
         train_loss = running_loss / len(train_loader)
-        train_loss_reconstruction = running_loss_reconstruction / len(train_loader)
-        train_loss_KL = running_loss_KL / len(train_loader)
+        train_loss_mse = running_loss_mse / len(train_loader)
+        train_loss_ssim = running_loss_ssim / len(train_loader)
+        train_loss_kl = running_loss_kl / len(train_loader)
         train_losses.append(train_loss)
-        train_losses_reconstruction.append(train_loss_reconstruction)
-        train_losses_KL.append(train_loss_KL)
+        train_losses_mse.append(train_loss_mse)
+        train_losses_ssim.append(train_loss_ssim)
+        train_losses_kl.append(train_loss_kl)
 
         running_loss = 0.0
-        running_loss_reconstruction = 0.0
-        running_loss_KL = 0.0
+        running_loss_mse = 0.0
+        running_loss_ssim = 0.0
+        running_loss_kl = 0.0
         valid_mean = []
         valid_label = []
-        # valid_image_ans = []
-        # valid_image_hat = []
         model.eval()
         for image, label in valid_loader:
             image = image.to(device)
@@ -114,37 +116,40 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
                     y, mean, std = model(image, label_one_hot)
                 else:
                     y, mean, std = model(image)
-                loss_reconstruction, loss_KL = loss_fn(image, y, mean, std)
+                loss_mse, loss_ssim, loss_kl = loss_fn(image, y, mean, std)
 
-            loss = loss_reconstruction + loss_KL
+            loss = loss_mse + loss_ssim + loss_kl
 
             running_loss += loss.item()
-            running_loss_reconstruction += loss_reconstruction.item()
-            running_loss_KL += loss_KL.item()
+            running_loss_mse += loss_mse.item()
+            running_loss_ssim += loss_ssim.item()
+            running_loss_kl += loss_kl.item()
             if len(valid_mean) * mean.shape[0] < 1000:
                 valid_mean.append(mean)
                 valid_label.append(label)
-            # valid_image_ans.append(image)
-            # valid_image_hat.append(y)
+
         valid_loss = running_loss / len(valid_loader)
-        valid_loss_reconstruction = running_loss_reconstruction / len(valid_loader)
-        valid_loss_KL = running_loss_KL / len(valid_loader)
+        valid_loss_mse = running_loss_mse / len(valid_loader)
+        valid_loss_ssim = running_loss_ssim / len(valid_loader)
+        valid_loss_kl = running_loss_kl / len(valid_loader)
         valid_losses.append(valid_loss)
-        valid_losses_reconstruction.append(valid_loss_reconstruction)
-        valid_losses_KL.append(valid_loss_KL)
+        valid_losses_mse.append(valid_loss_mse)
+        valid_losses_ssim.append(valid_loss_ssim)
+        valid_losses_kl.append(valid_loss_kl)
         valid_mean = torch.cat(valid_mean, dim=0)
         valid_label = torch.cat(valid_label, dim=0)
-        # valid_image_ans = torch.cat(valid_image_ans, dim=0)
-        # valid_image_hat = torch.cat(valid_image_hat, dim=0)
-        # valid_mean = mean
-        # valid_label = label
 
         end = time.time()
         elapsed_time = end - start
         total_elapsed_time += elapsed_time
-        print('\r\033[K' + 'epoch: {} train loss: {} ({}, {}), vaild loss: {} ({}, {}), elapsed time: {:.3f}'.format(
-            epoch, train_loss, train_loss_reconstruction, train_loss_KL,
-            valid_loss, valid_loss_reconstruction, valid_loss_KL, elapsed_time))
+
+        log = '\r\033[K' + 'epoch: {}'.format(epoch)
+        log += '  train loss: {:.6f} ({:.6f}, {:.6f}, {:.6f})'.format(
+            train_loss, train_loss_mse, train_loss_ssim, train_loss_kl)
+        log += '  valid loss: {:.6f} ({:.6f}, {:.6f}, {:.6f})'.format(
+            valid_loss, valid_loss_mse, valid_loss_ssim, valid_loss_kl)
+        log += '  elapsed time: {:.3f}'.format(elapsed_time)
+        print(log)
 
         # save model
         if valid_loss < best_test:
@@ -177,8 +182,9 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         # plot loss
         fig_loss.clf()
         plot_losses(fig_loss, train_losses, valid_losses,
-                    train_losses_reconstruction, valid_losses_reconstruction,
-                    train_losses_KL, valid_losses_KL)
+                    train_losses_mse, valid_losses_mse,
+                    train_losses_ssim, valid_losses_ssim,
+                    train_losses_kl, valid_losses_kl)
         fig_loss.savefig(os.path.join(out_dir, 'loss.png'))
 
         # show output
@@ -228,11 +234,13 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
                 'epoch': epoch,
                 'iteration': len(train_loader) * epoch,
                 'train_loss': train_loss,
-                'train_loss_KL': train_loss_KL,
-                'train_loss_reconstruction': train_loss_reconstruction,
+                'train_loss_mse': train_loss_mse,
+                'train_loss_ssim': train_loss_ssim,
+                'train_loss_kl': train_loss_kl,
                 'valid_loss': valid_loss,
-                'valid_loss_KL': valid_loss_KL,
-                'valid_loss_reconstruction': valid_loss_reconstruction,
+                'valid_loss_mse': valid_loss_mse,
+                'valid_loss_ssim': valid_loss_ssim,
+                'valid_loss_kl': valid_loss_kl,
             })
             wandb.save(path_checkpoint)
 

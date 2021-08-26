@@ -122,21 +122,30 @@ def plot_loss(ax, train_loss, valid_loss):
 
 
 def plot_losses(fig, train_loss, valid_loss,
-                train_loss_reconstruction, valid_loss_reconstruction,
-                train_loss_KL, valid_loss_KL):
-    ax1 = fig.add_subplot(311)
-    plot_loss(ax1, train_loss, valid_loss)
-    ax1.set_ylabel('total loss')
-    ax1.tick_params(bottom=False, labelbottom=False)
-    ax1.legend()
-    ax2 = fig.add_subplot(312)
-    plot_loss(ax2, train_loss_reconstruction, valid_loss_reconstruction)
-    ax2.set_ylabel('reconstruction error')
-    ax2.tick_params(bottom=False, labelbottom=False)
-    ax3 = fig.add_subplot(313)
-    plot_loss(ax3, train_loss_KL, valid_loss_KL)
-    ax3.set_ylabel('KL divergence')
-    ax3.set_xlabel('epoch')
+                train_loss_mse, valid_loss_mse,
+                train_loss_ssim, valid_loss_ssim,
+                train_loss_kl, valid_loss_kl):
+    ax = fig.add_subplot(411)
+    plot_loss(ax, train_loss, valid_loss)
+    ax.set_ylabel('Total Loss')
+    ax.tick_params(bottom=False, labelbottom=False)
+    ax.legend()
+
+    ax = fig.add_subplot(412)
+    plot_loss(ax, train_loss_mse, valid_loss_mse)
+    ax.set_ylabel('Mean Squared Error')
+    ax.tick_params(bottom=False, labelbottom=False)
+
+    ax = fig.add_subplot(413)
+    plot_loss(ax, train_loss_ssim, valid_loss_ssim)
+    ax.set_ylabel('Structural Similarity')
+    ax.tick_params(bottom=False, labelbottom=False)
+
+    ax = fig.add_subplot(414)
+    plot_loss(ax, train_loss_kl, valid_loss_kl)
+    ax.set_ylabel('KL Divergence')
+    ax.set_xlabel('epoch')
+
     fig.align_labels()
 
 
