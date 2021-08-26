@@ -144,13 +144,14 @@ class VAELoss(nn.Module):
 
     def forward(self, x, y, mean, std):
         # Mean Squared Error
-        # reconstruction = ((x - y)**2).reshape(x.shape[0], -1).sum(axis=1).mean()
+        weight_mse = 100
+        reconstruction = weight_mse * F.mse_loss(x, y)
 
         # Structural Similarity
-        reconstruction = 100 * self.ssim(x, y)
+        weight_ssim = 1
+        reconstruction += weight_ssim * self.ssim(x, y)
 
         # Kullback–Leibler divergence
-        # KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).sum(axis=1).mean()
         KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).mean()
 
         return reconstruction, KL
