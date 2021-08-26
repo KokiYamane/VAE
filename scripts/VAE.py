@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-import numpy as np
+from scripts.SSIM import SSIMLoss
 
 
 class InvertedResidual(nn.Module):
@@ -73,7 +73,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, z_dim, channel, label_dim=0):
+    def __init__(self, z_dim, n_channel, label_dim=0):
         super().__init__()
 
         input_dim = 2 + z_dim
@@ -82,7 +82,7 @@ class Decoder(nn.Module):
             self.dense_label = nn.Linear(label_dim, label_vec_dim)
             input_dim += label_vec_dim
 
-        units = [input_dim, 128, 256, 128, channel]
+        units = [input_dim, 128, 256, 128, n_channel]
         layer_list = []
         for i in range(0, len(units)-1):
             layer_list.append(nn.Linear(units[i], units[i+1]))
@@ -113,14 +113,14 @@ class Decoder(nn.Module):
 
 
 class VAE(nn.Module):
-    def __init__(self, z_dim=2, image_size=64, image_channel=3, label_dim=0):
+    def __init__(self, z_dim=2, image_size=64, n_channel=3, label_dim=0):
         super().__init__()
 
         self.image_size = image_size
 
-        channels = [image_channel, 8, 16, 32, 64, 128]
+        channels = [n_channel, 8, 16, 32, 64, 128]
         self.encoder = Encoder(z_dim, image_size, channels, label_dim)
-        self.decoder = Decoder(z_dim, image_channel, label_dim)
+        self.decoder = Decoder(z_dim, n_channel, label_dim)
 
     def _sample_z(self, mean, std):
         epsilon = torch.randn(mean.shape).to(mean.device)
@@ -137,14 +137,20 @@ class VAELoss(nn.Module):
     def __init__(self):
         super().__init__()
 
+        self.ssim = SSIMLoss()
+
     def _torch_log(self, x, eps=1e-10):
         return torch.log(torch.clamp(x, min=eps))
 
     def forward(self, x, y, mean, std):
         # Mean Squared Error
-        reconstruction = ((x - y)**2).reshape(x.shape[0], -1).sum(axis=1).mean()
+        # reconstruction = ((x - y)**2).reshape(x.shape[0], -1).sum(axis=1).mean()
+
+        # Structural Similarity
+        reconstruction = 100 * self.ssim(x, y)
 
         # Kullback–Leibler divergence
-        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).sum(axis=1).mean()
+        # KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).sum(axis=1).mean()
+        KL = -0.5 * (1 + self._torch_log(std**2) - mean**2 - std**2).mean()
 
         return reconstruction, KL

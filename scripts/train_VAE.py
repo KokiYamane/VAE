@@ -315,13 +315,13 @@ def main(args):
     )
 
     image, label = train_dataset[0]
-    image_channel = image.shape[-3]
+    n_channel = image.shape[-3]
     label_transform = lambda x: x
     if args.conditional:
         label_transform = to_one_hot(label_dim)
     else:
         label_dim = 0
-    model = VAE(z_dim=5, image_size=args.image_size, image_channel=image_channel, label_dim=label_dim)
+    model = VAE(z_dim=5, image_size=args.image_size, n_channel=n_channel, label_dim=label_dim)
 
     if not os.path.exists('results'):
         os.mkdir('results')
