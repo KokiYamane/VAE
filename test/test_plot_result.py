@@ -1,6 +1,7 @@
 import unittest
 
 import os
+import time
 
 import torch
 import torchvision
@@ -58,6 +59,7 @@ class TestPlotResult(unittest.TestCase):
             plt.savefig(folder_name + '/test_reconstructed_image.png')
             break
 
+        start = time.time()
         fig = plt.figure(figsize=(10, 10))
         point_num = 1000
         z_dim = 10
@@ -65,17 +67,31 @@ class TestPlotResult(unittest.TestCase):
         labels = torch.randint(high=10, size=(point_num,))
         plot_latent_space(fig, zs, labels)
         plt.savefig(folder_name + '/test_latent_space.png')
+        end = time.time()
+        print('elasped time:', end - start)
 
         model = VAE(z_dim, image_size)
         model.eval()
 
-        fig = plt.figure(figsize=(10, 10))
-        plot_2D_Manifold(fig, model, z_sumple=zs, device='cpu')
-        plt.savefig(folder_name + '/test_2D_Manifold.png')
+        # device setting
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # device = 'cpu'
+        print('device:', device)
+        model.to(device)
 
+        start = time.time()
         fig = plt.figure(figsize=(10, 10))
-        plot_latent_traversal(fig, model, row=z_dim, device='cpu')
+        plot_2D_Manifold(fig, model, z_sumple=zs, device=device, image_size=124)
+        plt.savefig(folder_name + '/test_2D_Manifold.png')
+        end = time.time()
+        print('elasped time:', end - start)
+
+        start = time.time()
+        fig = plt.figure(figsize=(10, 10))
+        plot_latent_traversal(fig, model, row=z_dim, device=device, image_size=124)
         plt.savefig(folder_name + '/test_latent_traversal.png')
+        end = time.time()
+        print('elasped time:', end - start)
 
 
 if __name__ == "__main__":

@@ -66,7 +66,7 @@ def plot_latent_space(fig, zs, labels, epoch=0):
 
 
 def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
-                     label=None, label_transform=lambda x: x):
+                     label=None, label_transform=lambda x: x, image_size=64):
     row = col
 
     x = np.tile(np.linspace(-2, 2, col), row)
@@ -88,7 +88,7 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
     else:
         label_transformed = None
 
-    images = model.decoder(z, image_size=64, label=label_transformed)
+    images = model.decoder(z, image_size=image_size, label=label_transformed)
     images = formatImages(images)
 
     cmap = None
@@ -150,7 +150,7 @@ def plot_losses(fig, train_loss, valid_loss,
 
 
 def plot_latent_traversal(fig, model, device, row, col=10, epoch=0,
-                          label=None, label_transform=lambda x: x):
+                          label=None, label_transform=lambda x: x, image_size=64):
     gradation = np.linspace(-2, 2, col)
     z = np.zeros(shape=(row, col, row))
     for i in range(row):
@@ -164,7 +164,7 @@ def plot_latent_traversal(fig, model, device, row, col=10, epoch=0,
     else:
         label_transformed = None
 
-    images = model.decoder(z, image_size=64, label=label_transformed)
+    images = model.decoder(z, image_size=image_size, label=label_transformed)
     images = formatImages(images)
 
     cmap = None

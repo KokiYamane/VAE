@@ -1,1 +1,1 @@
-datafolder = '../../datasets/sponge/'
+datafolder = '../../datasets/sponge_touch/'
