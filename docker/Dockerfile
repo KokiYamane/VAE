@@ -17,4 +17,7 @@ WORKDIR /root/requirements
 ADD requirements.txt /root/requirements
 RUN pip3 install -r requirements.txt
 
+# install fish
+RUN apt-get update && apt-get install -y fish
+
 WORKDIR /root/workspace

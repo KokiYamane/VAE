@@ -1,1 +1,1 @@
-docker-compose exec vae bash
+docker-compose exec vae fish
