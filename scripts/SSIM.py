@@ -17,7 +17,8 @@ class SSIMLoss(nn.Module):
         super().__init__()
         self.kernel_size = kernel_size
         self.sigma = sigma
-        self.gaussian_kernel = self._create_gaussian_kernel(self.kernel_size, self.sigma)
+        self.gaussian_kernel = self._create_gaussian_kernel(
+                                            self.kernel_size, self.sigma)
 
     def forward(self, x: Tensor, y: Tensor, as_loss: bool = True) -> Tensor:
 

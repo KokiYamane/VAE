@@ -5,7 +5,7 @@ def print_progress_bar(i, length, width=None, end='\n', header=''):
     digits = len(str(length))
     i_str = format(i+1, '0' + str(digits))
     footer = '{}/{}'.format(i_str, length)
-    if width == None:
+    if width is None:
         terminal_size = shutil.get_terminal_size()
         width = terminal_size.columns-len(header)-len(footer)-5
 

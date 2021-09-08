@@ -82,7 +82,7 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
         z = pca.inverse_transform(z)
     z = torch.from_numpy(z.astype(np.float32)).to(device)
 
-    if not label == None:
+    if label is not None:
         label_transformed = label_transform(label)
         label_transformed = label_transformed.repeat(z.shape[0], 1).to(device)
     else:
@@ -104,7 +104,7 @@ def plot_2D_Manifold(fig, model, device, z_sumple, col=10, epoch=0,
         ax.axis('off')
 
     suptitle = '{} epoch'.format(epoch)
-    if not label == None:
+    if label is not None:
         suptitle += '  label: {}'.format(label)
     fig.suptitle(suptitle)
     fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95)
@@ -149,8 +149,8 @@ def plot_losses(fig, train_loss, valid_loss,
     fig.align_labels()
 
 
-def plot_latent_traversal(fig, model, device, row, col=10, epoch=0,
-                          label=None, label_transform=lambda x: x, image_size=64):
+def plot_latent_traversal(fig, model, device, row, col=10, epoch=0, label=None,
+                          label_transform=lambda x: x, image_size=64):
     gradation = np.linspace(-2, 2, col)
     z = np.zeros(shape=(row, col, row))
     for i in range(row):
@@ -158,7 +158,7 @@ def plot_latent_traversal(fig, model, device, row, col=10, epoch=0,
     z = z.reshape(-1, row)
     z = torch.from_numpy(z.astype(np.float32)).to(device)
 
-    if not label == None:
+    if label is not None:
         label_transformed = label_transform(label)
         label_transformed = label_transformed.repeat(z.shape[0], 1).to(device)
     else:
@@ -180,7 +180,7 @@ def plot_latent_traversal(fig, model, device, row, col=10, epoch=0,
         ax.axis('off')
 
     suptitle = '{} epoch'.format(epoch)
-    if not label == None:
+    if label is not None:
         suptitle += '  label: {}'.format(label)
     fig.suptitle(suptitle)
     fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95)

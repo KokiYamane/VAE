@@ -5,24 +5,28 @@ from scripts.SSIM import SSIMLoss
 
 
 class InvertedResidual(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=0, expand_ratio=6):
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1,
+                 padding=0, expand_ratio=6):
         super().__init__()
 
         hidden_channels = round(in_channels * expand_ratio)
 
         self.invertedResidual = nn.Sequential(
             # point wise
-            nn.Conv2d(in_channels, hidden_channels, kernel_size=1, bias=False),
+            nn.Conv2d(in_channels, hidden_channels,
+                      kernel_size=1, bias=False),
             nn.BatchNorm2d(hidden_channels),
             nn.ReLU6(),
 
             # depth wise
-            nn.Conv2d(hidden_channels, hidden_channels, kernel_size, stride, padding, groups=in_channels, bias=False),
+            nn.Conv2d(hidden_channels, hidden_channels, kernel_size, stride,
+                      padding, groups=in_channels, bias=False),
             nn.BatchNorm2d(hidden_channels),
             nn.ReLU6(),
 
             # point wise
-            nn.Conv2d(hidden_channels, out_channels, kernel_size=1, bias=False),
+            nn.Conv2d(hidden_channels, out_channels,
+                      kernel_size=1, bias=False),
             nn.BatchNorm2d(out_channels),
             nn.ReLU6(),
         )
@@ -47,8 +51,15 @@ class Encoder(nn.Module):
         conv_list = []
         conv_list.append(nn.Dropout(0.01))
         for i in range(len(channels)-1):
-            # conv_list.append(nn.Conv2d(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2))
-            conv_list.append(InvertedResidual(channels[i], channels[i+1], kernel_size=5, stride=2, padding=2, expand_ratio=6))
+            conv_list.append(
+                InvertedResidual(
+                    channels[i],
+                    channels[i+1],
+                    kernel_size=5,
+                    stride=2,
+                    padding=2,
+                    expand_ratio=6,
+                ))
         conv_list.append(nn.Flatten())
         self.conv = nn.Sequential(*conv_list)
 
@@ -59,7 +70,7 @@ class Encoder(nn.Module):
         self.dense_encvar = nn.Linear(feature_dim, z_dim)
 
     def forward(self, x, label=None):
-        if label != None:
+        if label is not None:
             if label.dim() == 1:
                 label = label.unsqueeze(1)
             v = self.dense_label(label.float())
@@ -102,7 +113,7 @@ class Decoder(nn.Module):
         xy = xy.repeat(z.shape[0], 1, 1)
         z = z.repeat(height * width, 1, 1).permute(1, 0, 2)
         z = torch.cat([xy, z], dim=2)
-        if label != None:
+        if label is not None:
             v = self.dense_label(label.float()).to(z.device)
             v = v.repeat(height * width, 1, 1).permute(1, 0, 2)
             z = torch.cat([z, v], dim=2)

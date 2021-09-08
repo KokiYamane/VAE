@@ -3,18 +3,18 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import glob
 from tqdm import tqdm
-import numpy as np
 import os
 from concurrent import futures
 from PIL import Image
-import re
 
 
 class ImageDataset(Dataset):
-    def __init__(self, datafolder, data_num=None, train=True, split_ratio=0.8, image_size=64):
+    def __init__(self, datafolder, data_num=None, train=True,
+                 split_ratio=0.8, image_size=64):
         self.image_size = image_size
         self.transform = transforms.Compose([
-            transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
+            transforms.ColorJitter(
+                brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
         ])
 
         image_list = []
@@ -30,12 +30,13 @@ class ImageDataset(Dataset):
             else:
                 paths = paths[train_data_num:]
 
-            if data_num != None and data_num < len(paths):
+            if data_num is not None and data_num < len(paths):
                 paths = paths[:data_num]
 
             print('loading {} data'.format(len(paths)))
             for image_folder_path in tqdm(paths):
-                image_paths = glob.glob(os.path.join(image_folder_path, '*.jpg'))
+                image_paths = glob.glob(
+                    os.path.join(image_folder_path, '*.jpg'))
                 image = self._load_images(image_paths)
                 image_list.extend(image)
                 label_list.extend([i] * len(image))
@@ -47,8 +48,11 @@ class ImageDataset(Dataset):
 
         print('image shape:', self.image.shape)
         print('label shape:', self.label.shape)
-        print('image data size: {} [MiB]'.format(self.image.detach().numpy().copy().__sizeof__()/1.049e+6))
-        print('label data size: {} [MiB]'.format(self.label.detach().numpy().copy().__sizeof__()/1.049e+6))
+
+        image_data_size = self.image.detach().numpy().copy().__sizeof__()
+        label_data_size = self.label.detach().numpy().copy().__sizeof__()
+        print('image data size: {} [MiB]'.format(image_data_size / 1.049e+6))
+        print('label data size: {} [MiB]'.format(label_data_size / 1.049e+6))
 
     def __len__(self):
         return len(self.image)

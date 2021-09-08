@@ -27,8 +27,8 @@ def to_one_hot(n_class=10):
 
 
 def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
-              out_dir='', lr=0.001, optimizer_cls=optim.Adam,
-              wandb_flag=False, gpu_num=0, conditional=False, label_transform=lambda x: x):
+              out_dir='', lr=0.001, optimizer_cls=optim.Adam, wandb_flag=False,
+              gpu_num=0, conditional=False, label_transform=lambda x: x):
     train_losses, valid_losses = [], []
     train_losses_mse, valid_losses_mse = [], []
     train_losses_ssim, valid_losses_ssim = [], []
@@ -38,7 +38,8 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
     optimizer = optimizer_cls(model.parameters(), lr=lr)
 
     # device setting
-    device = torch.device('cuda:{}'.format(gpu_num[0]) if torch.cuda.is_available() else 'cpu')
+    cuda_flag = torch.cuda.is_available()
+    device = torch.device(f'cuda:{gpu_num[0]}' if cuda_flag else 'cpu')
     print('device:', device)
     print("Let's use", torch.cuda.device_count(), "GPUs!")
     model = nn.DataParallel(model, device_ids=gpu_num)
@@ -87,7 +88,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             running_loss_ssim += loss_ssim.item()
             running_loss_kl += loss_kl.item()
 
-            header = 'epoch: {}'.format(epoch)
+            header = f'epoch: {epoch}'
             print_progress_bar(i, len(train_loader), end='', header=header)
 
         train_loss = running_loss / len(train_loader)
@@ -143,7 +144,7 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         elapsed_time = end - start
         total_elapsed_time += elapsed_time
 
-        log = '\r\033[K' + 'epoch: {}'.format(epoch)
+        log = '\r\033[K' + f'epoch: {epoch}'
         log += '  train loss: {:.6f} ({:.6f}, {:.6f}, {:.6f})'.format(
             train_loss, train_loss_mse, train_loss_ssim, train_loss_kl)
         log += '  valid loss: {:.6f} ({:.6f}, {:.6f}, {:.6f})'.format(
@@ -154,7 +155,8 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
         # save model
         if valid_loss < best_test:
             best_test = valid_loss
-            path_model_param_best = os.path.join(out_dir, 'model_param_best.pt')
+            path_model_param_best = os.path.join(
+                out_dir, 'model_param_best.pt')
             torch.save(model.state_dict(), path_model_param_best)
             if wandb_flag:
                 wandb.save(path_model_param_best)
@@ -192,14 +194,16 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             image_ans = formatImages(image)
             image_hat = formatImages(y)
             fig_reconstructed_image.clf()
-            plot_reconstructed_image(fig_reconstructed_image, image_ans, image_hat, col=10, epoch=epoch)
-            path_reconstructed_image_png = os.path.join(out_dir, 'reconstructed_image.png')
-            fig_reconstructed_image.savefig(path_reconstructed_image_png)
+            plot_reconstructed_image(fig_reconstructed_image, image_ans,
+                                     image_hat, col=10, epoch=epoch)
+            fig_reconstructed_image.savefig(
+                os.path.join(out_dir, 'reconstructed_image.png'))
 
             fig_latent_space.clf()
-            plot_latent_space(fig_latent_space, valid_mean, valid_label, epoch=epoch)
-            path_latent_space = os.path.join(out_dir, 'latent_space.png')
-            fig_latent_space.savefig(path_latent_space)
+            plot_latent_space(fig_latent_space, valid_mean,
+                              valid_label, epoch=epoch)
+            fig_latent_space.savefig(
+                os.path.join(out_dir, 'latent_space.png'))
 
             fig_2D_Manifold.clf()
             if conditional:
@@ -209,15 +213,15 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             plot_2D_Manifold(fig_2D_Manifold, model.module, device,
                              z_sumple=valid_mean, col=20, epoch=epoch,
                              label=label, label_transform=label_transform)
-            path_fig_2D_Manifold = os.path.join(out_dir, '2D_Manifold.png')
-            fig_2D_Manifold.savefig(path_fig_2D_Manifold)
+            fig_2D_Manifold.savefig(
+                os.path.join(out_dir, '2D_Manifold.png'))
 
             fig_latent_traversal.clf()
             plot_latent_traversal(fig_latent_traversal, model.module, device,
                                   row=valid_mean.shape[1], col=10, epoch=epoch,
                                   label=label, label_transform=label_transform)
-            path_fig_latent_traversal = os.path.join(out_dir, 'latent_traversal.png')
-            fig_latent_traversal.savefig(path_fig_latent_traversal)
+            fig_latent_traversal.savefig(
+                os.path.join(out_dir, 'latent_traversal.png'))
 
             if wandb_flag:
                 wandb.log({
@@ -297,15 +301,18 @@ def torchvision_dataset(dataset, image_size):
             root='../datasets/celebA', split='valid', target_type='identity',
             download=True, transform=transform)
     else:
-        train_dataset = ImageDataset(dataset, train=True, image_size=image_size)
-        valid_dataset = ImageDataset(dataset, train=False, image_size=image_size)
+        train_dataset = ImageDataset(
+            dataset, train=True, image_size=image_size)
+        valid_dataset = ImageDataset(
+            dataset, train=False, image_size=image_size)
         label_dim = train_dataset.label_dim
 
     return train_dataset, valid_dataset, label_dim
 
 
 def main(args):
-    train_dataset, valid_dataset, label_dim = torchvision_dataset(args.data_path, image_size=args.image_size)
+    train_dataset, valid_dataset, label_dim = torchvision_dataset(
+        args.data_path, image_size=args.image_size)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -329,7 +336,12 @@ def main(args):
         label_transform = to_one_hot(label_dim)
     else:
         label_dim = 0
-    model = VAE(z_dim=5, image_size=args.image_size, n_channel=n_channel, label_dim=label_dim)
+    model = VAE(
+        z_dim=5,
+        image_size=args.image_size,
+        n_channel=n_channel,
+        label_dim=label_dim
+    )
 
     if not os.path.exists('results'):
         os.mkdir('results')
