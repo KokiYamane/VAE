@@ -2,17 +2,24 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 import glob
-from tqdm import tqdm
 import os
+from tqdm import tqdm
 from concurrent import futures
 from PIL import Image
 
 
 class ImageDataset(Dataset):
-    def __init__(self, datafolder, data_num=None, train=True,
-                 split_ratio=0.8, image_size=64):
+    def __init__(
+        self,
+        datafolder: str,
+        data_num: int = None,
+        train: bool = True,
+        split_ratio: float = 0.8,
+        image_size: int = 64
+    ):
         self.image_size = image_size
         self.transform = transforms.Compose([
+            transforms.RandomRotation(180, fill=(1,)),
             transforms.ColorJitter(
                 brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
         ])
@@ -20,28 +27,33 @@ class ImageDataset(Dataset):
         image_list = []
         label_list = []
 
-        folders = glob.glob('{}/*'.format(datafolder))
-        for i, folder in enumerate(folders):
-            paths = glob.glob('{}/color/*'.format(folder))
+        # folders = glob.glob('{}/*'.format(datafolder))
+        # for i, folder in enumerate(folders):
+        # paths = glob.glob('{}/color/*'.format(folder))
+        paths = glob.glob(os.path.join(datafolder, '*.png'))
+        # print(os.path.join(datafolder, '*.png'))
+        # print(paths)
 
-            train_data_num = int(split_ratio * len(paths))
-            if train:
-                paths = paths[:train_data_num]
-            else:
-                paths = paths[train_data_num:]
+        train_data_num = int(split_ratio * len(paths))
+        if train:
+            paths = paths[:train_data_num]
+        else:
+            paths = paths[train_data_num:]
 
-            if data_num is not None and data_num < len(paths):
-                paths = paths[:data_num]
+        if data_num is not None and data_num < len(paths):
+            paths = paths[:data_num]
 
-            print('loading {} data'.format(len(paths)))
-            for image_folder_path in tqdm(paths):
-                image_paths = glob.glob(
-                    os.path.join(image_folder_path, '*.jpg'))
-                image = self._load_images(image_paths)
-                image_list.extend(image)
-                label_list.extend([i] * len(image))
+        print('loading {} data'.format(len(paths)))
+        # for image_folder_path in tqdm(paths):
+        #     image_paths = glob.glob(
+        #         os.path.join(image_folder_path, '*.png'))
+        image = self._load_images(paths)
+        image_list.extend(image)
+        # label_list.extend([i] * len(image))
+        label_list.extend([0] * len(image))
 
-        self.label_dim = i + 1
+        # self.label_dim = i + 1
+        self.label_dim = 1
 
         self.image = torch.stack(image_list).squeeze()
         self.label = torch.tensor(label_list)

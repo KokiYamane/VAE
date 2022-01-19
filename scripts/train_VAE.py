@@ -26,9 +26,20 @@ def to_one_hot(n_class=10):
     return lambda labels: torch.eye(n_class)[labels]
 
 
-def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
-              out_dir='', lr=0.001, optimizer_cls=optim.Adam, wandb_flag=False,
-              gpu_num=0, conditional=False, label_transform=lambda x: x):
+def train_VAE(
+    n_epochs: int,
+    train_loader: torch.utils.data.DataLoader,
+    valid_loader: torch.utils.data.DataLoader,
+    model: nn.modules,
+    loss_fn: nn.modules,
+    out_dir: str = '',
+    lr: float = 0.001,
+    optimizer_cls: torch.optim = optim.Adam,
+    wandb_flag: bool = False,
+    gpu_num: int = 0,
+    conditional: bool = False,
+    label_transform: callable = lambda x: x
+):
     train_losses, valid_losses = [], []
     train_losses_mse, valid_losses_mse = [], []
     train_losses_ssim, valid_losses_ssim = [], []
@@ -194,8 +205,13 @@ def train_VAE(n_epochs, train_loader, valid_loader, model, loss_fn,
             image_ans = formatImages(image)
             image_hat = formatImages(y)
             fig_reconstructed_image.clf()
-            plot_reconstructed_image(fig_reconstructed_image, image_ans,
-                                     image_hat, col=10, epoch=epoch)
+            plot_reconstructed_image(
+                fig_reconstructed_image,
+                image_ans,
+                image_hat,
+                col=4,
+                epoch=epoch
+            )
             fig_reconstructed_image.savefig(
                 os.path.join(out_dir, 'reconstructed_image.png'))
 
@@ -312,7 +328,7 @@ def torchvision_dataset(dataset, image_size):
 
 def main(args):
     train_dataset, valid_dataset, label_dim = torchvision_dataset(
-        args.data_path, image_size=args.image_size)
+        args.data, image_size=args.image_size)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -331,7 +347,7 @@ def main(args):
 
     image, label = train_dataset[0]
     n_channel = image.shape[-3]
-    label_transform = lambda x: x
+    def label_transform(x): return x
     if args.conditional:
         label_transform = to_one_hot(label_dim)
     else:
@@ -354,12 +370,12 @@ def main(args):
 
         config = wandb.config
 
-        config.data_path = args.data_path
+        config.data_path = args.data
         config.epoch = args.epoch
         config.batch_size = args.batch_size
         config.learning_rate = args.learning_rate
         config.image_size = args.image_size
-        config.gpu_num = args.gpu_num
+        config.gpu_num = args.gpu
         config.conditional = args.conditional
 
         config.train_data_num = len(train_dataset)
@@ -374,7 +390,7 @@ def main(args):
         out_dir=out_dir,
         lr=args.learning_rate,
         wandb_flag=args.wandb,
-        gpu_num=args.gpu_num,
+        gpu_num=args.gpu,
         conditional=args.conditional,
         label_transform=label_transform,
     )
@@ -383,14 +399,14 @@ def main(args):
 def argparse():
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('--data_path', type=str, default='mnist')
+    parser.add_argument('--data', type=str, default='mnist')
     parser.add_argument('--epoch', type=int, default=10000)
-    parser.add_argument('--batch_size', type=int, default=100)
+    parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--image_size', type=int, default=32)
+    parser.add_argument('--image_size', type=int, default=128)
     parser.add_argument('--wandb', action='store_true')
-    tp = lambda x:list(map(int, x.split(',')))
-    parser.add_argument('--gpu_num', type=tp, default='0')
+    def tp(x): return list(map(int, x.split(',')))
+    parser.add_argument('--gpu', type=tp, default='0')
     parser.add_argument('--conditional', action='store_true')
     return parser.parse_args()
 
