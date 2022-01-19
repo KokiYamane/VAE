@@ -6,6 +6,8 @@ import os
 from tqdm import tqdm
 from concurrent import futures
 from PIL import Image
+import cv2
+import numpy as np
 
 
 class ImageDataset(Dataset):
@@ -19,9 +21,9 @@ class ImageDataset(Dataset):
     ):
         self.image_size = image_size
         self.transform = transforms.Compose([
-            transforms.RandomRotation(180, fill=(1,)),
-            transforms.ColorJitter(
-                brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
+            transforms.RandomRotation(180, fill=(0,)),
+            # transforms.ColorJitter(
+            #     brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
         ])
 
         image_list = []
@@ -55,7 +57,7 @@ class ImageDataset(Dataset):
         # self.label_dim = i + 1
         self.label_dim = 1
 
-        self.image = torch.stack(image_list).squeeze()
+        self.image = torch.stack(image_list)
         self.label = torch.tensor(label_list)
 
         print('image shape:', self.image.shape)
@@ -71,6 +73,7 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, idx):
         image = self.image[idx]
+        # print(image.shape)
         image = self.transform(image)
         return image, self.label[idx]
 
@@ -84,8 +87,18 @@ class ImageDataset(Dataset):
         def load_one_frame(idx):
             if not os.path.exists(image_paths[idx]):
                 return
-            image = Image.open(image_paths[idx])
+            # image = Image.open(image_paths[idx])
+
+            image = cv2.imread(image_paths[idx], 0)
+            image = cv2.Canny(image, 35, 50)
+            # image = cv2.Laplacian(image, cv2.CV_8UC1)
+            # ret, image = cv2.threshold(image, 0, 255, cv2.THRESH_OTSU)
+            kernel = np.ones((5, 5), np.uint8)
+            image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
+            # print(image.shape)
+
             image = transform(image)
+            # print(image.shape)
             return idx, image
 
         image_list = []

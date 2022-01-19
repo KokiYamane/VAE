@@ -24,7 +24,7 @@ class TestPlotResult(unittest.TestCase):
     def test_plot_result(self):
         print('\n========== test plot result ==========')
 
-        image_size = 32
+        image_size = 256
 
         # transform = transforms.Compose([
         #     transforms.ToTensor(),
@@ -52,6 +52,7 @@ class TestPlotResult(unittest.TestCase):
             os.mkdir(folder_name)
 
         for image, label in dataloader:
+            # print(image.shape)
             image_ans = formatImages(image)
 
             fig = plt.figure(figsize=(20, 10))

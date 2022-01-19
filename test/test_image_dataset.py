@@ -14,7 +14,7 @@ from dataset_path import datafolder
 class TestImageDataset(unittest.TestCase):
     def test_dataset(self):
         print('\n========== test fast dataset and fast data loader ==========')
-        dataset = ImageDataset(datafolder, data_num=50, image_size=128)
+        dataset = ImageDataset(datafolder, data_num=50, image_size=256)
         print('data length:', len(dataset))
         dataloader = FastDataLoader(
             dataset,
