@@ -42,7 +42,7 @@ class Encoder(nn.Module):
         self.image_size = image_size
 
         if label_dim != 0:
-            label_vec_dim = 2
+            label_vec_dim = 3
             self.dense_label = nn.Linear(label_dim, label_vec_dim)
             import copy
             channels = copy.deepcopy(channels)
@@ -93,7 +93,7 @@ class Decoder(nn.Module):
             self.dense_label = nn.Linear(label_dim, label_vec_dim)
             input_dim += label_vec_dim
 
-        units = [input_dim, 128, 256, 128, n_channel]
+        units = [input_dim, 128, 256, 256, 256, 128, n_channel]
         layer_list = []
         for i in range(0, len(units)-1):
             layer_list.append(nn.Linear(units[i], units[i+1]))

@@ -22,7 +22,8 @@ class ImageDataset(Dataset):
         self.image_size = image_size
         self.transform = transforms.Compose([
             # transforms.RandomRotation(180, fill=(0,)),
-            transforms.RandomRotation(180, fill=(1,)),
+            # transforms.RandomRotation(180, fill=(1,)),
+            transforms.RandomAffine(degrees=180, translate=(0.1, 0.1), fill=(1,)),
             # transforms.ColorJitter(
             #     brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
         ])
