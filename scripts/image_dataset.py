@@ -30,30 +30,30 @@ class ImageDataset(Dataset):
         image_list = []
         label_list = []
 
-        # folders = glob.glob('{}/*'.format(datafolder))
-        # for i, folder in enumerate(folders):
-        # paths = glob.glob('{}/color/*'.format(folder))
-        paths = glob.glob(os.path.join(datafolder, '*.png'))
-        # print(os.path.join(datafolder, '*.png'))
-        # print(paths)
+        folders = glob.glob('{}/*'.format(datafolder))
+        for i, folder in enumerate(folders):
+            # paths = glob.glob('{}/color/*'.format(folder))
+            paths = glob.glob(os.path.join(folder, '*.png'))
+            # print(os.path.join(datafolder, '*.png'))
+            # print(paths)
 
-        train_data_num = int(split_ratio * len(paths))
-        if train:
-            paths = paths[:train_data_num]
-        else:
-            paths = paths[train_data_num:]
+            train_data_num = int(split_ratio * len(paths))
+            if train:
+                paths = paths[:train_data_num]
+            else:
+                paths = paths[train_data_num:]
 
-        if data_num is not None and data_num < len(paths):
-            paths = paths[:data_num]
+            if data_num is not None and data_num < len(paths):
+                paths = paths[:data_num]
 
-        print('loading {} data'.format(len(paths)))
-        # for image_folder_path in tqdm(paths):
-        #     image_paths = glob.glob(
-        #         os.path.join(image_folder_path, '*.png'))
-        image = self._load_images(paths)
-        image_list.extend(image)
-        # label_list.extend([i] * len(image))
-        label_list.extend([0] * len(image))
+            print(f'loading {len(paths)} data from {folder}')
+            # for image_folder_path in tqdm(paths):
+            #     image_paths = glob.glob(
+            #         os.path.join(image_folder_path, '*.png'))
+            image = self._load_images(paths)
+            image_list.extend(image)
+            # label_list.extend([i] * len(image))
+            label_list.extend([0] * len(image))
 
         # self.label_dim = i + 1
         self.label_dim = 1
@@ -88,12 +88,13 @@ class ImageDataset(Dataset):
         def load_one_frame(idx):
             if not os.path.exists(image_paths[idx]):
                 return
-            # image = Image.open(image_paths[idx])
+            image = Image.open(image_paths[idx])
 
-            image = cv2.imread(image_paths[idx], 0)
-            image = cv2.Canny(image, 35, 50)
-            kernel = np.ones((5, 5), np.uint8)
-            image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
+            # edge
+            # image = cv2.imread(image_paths[idx], 0)
+            # image = cv2.Canny(image, 35, 50)
+            # kernel = np.ones((5, 5), np.uint8)
+            # image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
 
             image = transform(image)
             return idx, image
