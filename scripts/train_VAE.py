@@ -1,3 +1,4 @@
+from ast import Tuple
 import sys
 import os
 import time
@@ -19,252 +20,249 @@ sys.path.append('..')
 from scripts.VAE import VAE, VAELoss
 from scripts.image_dataset import ImageDataset
 from scripts.plot_result import *
-from scripts.print_progress_bar import print_progress_bar
+from scripts.trainer import Tranier
 
 
-def to_one_hot(n_class=10):
-    return lambda labels: torch.eye(n_class)[labels]
+class VAETrainer(Tranier):
+    def __init__(
+        self,
+        data_path: str,
+        out_dir: str,
+        batch_size: int,
+        image_size: int,
+        learning_rate: float,
+        wandb_flag: bool,
+        gpu: list = [0],
+        conditional: bool = False,
+    ):
+        self.out_dir = out_dir
+        self.loss_fn = VAELoss()
+        self.conditional = conditional
+        self.device = torch.device(f'cuda:{gpu[0]}'
+                                   if torch.cuda.is_available() else 'cpu')
 
+        # figure
+        self.fig_reconstructed_image = plt.figure(figsize=(20, 10))
+        self.fig_latent_space = plt.figure(figsize=(10, 10))
+        self.fig_2D_Manifold = plt.figure(figsize=(10, 10))
+        self.fig_latent_traversal = plt.figure(figsize=(10, 10))
+        self.fig_loss = plt.figure(figsize=(10, 10))
 
-def train_VAE(
-    n_epochs: int,
-    train_loader: torch.utils.data.DataLoader,
-    valid_loader: torch.utils.data.DataLoader,
-    model: nn.modules,
-    loss_fn: nn.modules,
-    out_dir: str = '',
-    lr: float = 0.001,
-    optimizer_cls: torch.optim = optim.Adam,
-    wandb_flag: bool = False,
-    gpu_num: int = 0,
-    conditional: bool = False,
-    label_transform: callable = lambda x: x
-):
-    train_losses, valid_losses = [], []
-    train_losses_mse, valid_losses_mse = [], []
-    train_losses_ssim, valid_losses_ssim = [], []
-    train_losses_kl, valid_losses_kl = [], []
-    total_elapsed_time = 0
-    best_test = 1e10
-    optimizer = optimizer_cls(model.parameters(), lr=lr)
+        self.valid_mean = []
+        self.valid_label = []
+        self.train_loss_mse = 0.0
+        self.train_loss_ssim = 0.0
+        self.train_loss_kl = 0.0
+        self.valid_loss_mse = 0.0
+        self.valid_loss_ssim = 0.0
+        self.valid_loss_kl = 0.0
 
-    # device setting
-    cuda_flag = torch.cuda.is_available()
-    device = torch.device(f'cuda:{gpu_num[0]}' if cuda_flag else 'cpu')
-    print('device:', device)
-    print("Let's use", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model, device_ids=gpu_num)
-    model.to(device)
+        train_dataset, valid_dataset, label_dim = torchvision_dataset(
+            data_path, image_size=image_size)
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=8,
+            # pin_memory=True,
+        )
+        valid_loader = torch.utils.data.DataLoader(
+            valid_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=8,
+            # pin_memory=True,
+            drop_last=True,
+        )
 
-    # acceleration
-    scaler = torch.cuda.amp.GradScaler()
-    torch.backends.cudnn.benchmark = True
+        print('train data num:', len(train_dataset))
+        print('valid data num:', len(valid_dataset))
 
-    # figure
-    fig_reconstructed_image = plt.figure(figsize=(20, 10))
-    fig_latent_space = plt.figure(figsize=(10, 10))
-    fig_2D_Manifold = plt.figure(figsize=(10, 10))
-    fig_latent_traversal = plt.figure(figsize=(10, 10))
-    fig_loss = plt.figure(figsize=(10, 10))
+        image, label = train_dataset[0]
+        n_channel = image.shape[-3]
+        # def label_transform(x): return x
+        if args.conditional:
+            self.label_transform = self.to_one_hot(label_dim)
+        else:
+            label_dim = 0
+            self.label_transform = lambda x: None
+        model = VAE(
+            z_dim=5,
+            image_size=args.image_size,
+            n_channel=n_channel,
+            label_dim=label_dim
+        )
 
-    for epoch in range(n_epochs + 1):
-        start = time.time()
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-        running_loss = 0.0
-        running_loss_mse = 0.0
-        running_loss_ssim = 0.0
-        running_loss_kl = 0.0
-        model.train()
-        for i, (image, label) in enumerate(train_loader):
-            image = image.to(device)
+        super().__init__(
+            train_loader=train_loader,
+            valid_loader=valid_loader,
+            model=model,
+            calc_loss=self.calc_loss,
+            optimizer=optimizer,
+            out_dir=out_dir,
+            wandb_flag=wandb_flag,
+            gpu=gpu,
+        )
 
-            with torch.cuda.amp.autocast():
-                if conditional:
-                    label_one_hot = label_transform(label)
-                    label_one_hot = label_one_hot.to(device)
-                    y, mean, std = model(image, label_one_hot)
-                else:
-                    y, mean, std = model(image)
-                loss_mse, loss_ssim, loss_kl = loss_fn(image, y, mean, std)
+        if wandb_flag:
+            wandb.init(project='VAE')
+            wandb.watch(model)
 
-            loss = loss_mse + loss_ssim + loss_kl
+            config = wandb.config
 
-            optimizer.zero_grad()
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            config.data_path = args.data
+            config.epoch = args.epoch
+            config.batch_size = args.batch_size
+            config.learning_rate = args.learning_rate
+            config.image_size = args.image_size
+            config.gpu_num = args.gpu
+            config.conditional = args.conditional
 
-            running_loss += loss.item()
-            running_loss_mse += loss_mse.item()
-            running_loss_ssim += loss_ssim.item()
-            running_loss_kl += loss_kl.item()
+            config.train_data_num = len(train_dataset)
+            config.valid_data_num = len(valid_dataset)
 
-            header = f'epoch: {epoch}'
-            print_progress_bar(i, len(train_loader), end='', header=header)
+    def to_one_hot(self, n_class=10):
+        return lambda labels: torch.eye(n_class)[labels]
 
-        train_loss = running_loss / len(train_loader)
-        train_loss_mse = running_loss_mse / len(train_loader)
-        train_loss_ssim = running_loss_ssim / len(train_loader)
-        train_loss_kl = running_loss_kl / len(train_loader)
-        train_losses.append(train_loss)
-        train_losses_mse.append(train_loss_mse)
-        train_losses_ssim.append(train_loss_ssim)
-        train_losses_kl.append(train_loss_kl)
+    def calc_loss(
+        self,
+        batch,
+        valid: bool = False,
+    ) -> torch.Tensor:
+        image, label = batch
+        image = image.to(self.device)
 
-        running_loss = 0.0
-        running_loss_mse = 0.0
-        running_loss_ssim = 0.0
-        running_loss_kl = 0.0
-        valid_mean = []
-        valid_label = []
-        model.eval()
-        for image, label in valid_loader:
-            image = image.to(device)
+        with torch.cuda.amp.autocast():
+            if self.conditional:
+                label_one_hot = self.label_transform(label)
+                label_one_hot = label_one_hot.to(self.device)
+                y, mean, std = self.model(image, label_one_hot)
+            else:
+                y, mean, std = self.model(image)
+            loss_mse, loss_ssim, loss_kl = self.loss_fn(image, y, mean, std)
 
-            with torch.cuda.amp.autocast():
-                if conditional:
-                    label_one_hot = label_transform(label)
-                    label_one_hot = label_one_hot.to(device)
-                    y, mean, std = model(image, label_one_hot)
-                else:
-                    y, mean, std = model(image)
-                loss_mse, loss_ssim, loss_kl = loss_fn(image, y, mean, std)
+        if len(self.valid_mean) * mean.shape[0] < 1000:
+            self.valid_mean.append(mean)
+            self.valid_label.append(label)
 
-            loss = loss_mse + loss_ssim + loss_kl
+        self.y = y
+        self.image = image
+        self.label = label
 
-            running_loss += loss.item()
-            running_loss_mse += loss_mse.item()
-            running_loss_ssim += loss_ssim.item()
-            running_loss_kl += loss_kl.item()
-            if len(valid_mean) * mean.shape[0] < 1000:
-                valid_mean.append(mean)
-                valid_label.append(label)
+        if not valid:
+            self.train_loss_mse += loss_mse.item()
+            self.train_loss_ssim += loss_ssim.item()
+            self.train_loss_kl += loss_kl.item()
+        else:
+            self.valid_loss_mse += loss_mse.item()
+            self.valid_loss_ssim += loss_ssim.item()
+            self.valid_loss_kl += loss_kl.item()
 
-        valid_loss = running_loss / len(valid_loader)
-        valid_loss_mse = running_loss_mse / len(valid_loader)
-        valid_loss_ssim = running_loss_ssim / len(valid_loader)
-        valid_loss_kl = running_loss_kl / len(valid_loader)
-        valid_losses.append(valid_loss)
-        valid_losses_mse.append(valid_loss_mse)
-        valid_losses_ssim.append(valid_loss_ssim)
-        valid_losses_kl.append(valid_loss_kl)
-        valid_mean = torch.cat(valid_mean, dim=0)
-        valid_label = torch.cat(valid_label, dim=0)
+        loss = loss_mse + loss_ssim + loss_kl
+        return loss
 
-        end = time.time()
-        elapsed_time = end - start
-        total_elapsed_time += elapsed_time
+    def plot_result(self, epoch: int):
+        # wandb
+        train_loss_mse = self.train_loss_mse / len(self.train_loader)
+        train_loss_ssim = self.train_loss_ssim / len(self.train_loader)
+        train_loss_kl = self.train_loss_kl / len(self.train_loader)
+        valid_loss_mse = self.valid_loss_mse / len(self.valid_loader)
+        valid_loss_ssim = self.valid_loss_ssim / len(self.valid_loader)
+        valid_loss_kl = self.valid_loss_kl / len(self.valid_loader)
+        self.train_loss_mse = 0.0
+        self.train_loss_ssim = 0.0
+        self.train_loss_kl = 0.0
+        self.valid_loss_mse = 0.0
+        self.valid_loss_ssim = 0.0
+        self.valid_loss_kl = 0.0
+        if self.wandb_flag:
+            wandb.log({
+                'epoch': epoch,
+                'iteration': len(self.train_loader) * epoch,
+                'train_loss_mse': train_loss_mse,
+                'train_loss_ssim': train_loss_ssim,
+                'train_loss_kl': train_loss_kl,
+                'valid_loss_mse': valid_loss_mse,
+                'valid_loss_ssim': valid_loss_ssim,
+                'valid_loss_kl': valid_loss_kl,
+            })
 
-        log = '\r\033[K' + f'epoch: {epoch}'
-        log += '  train loss: {:.6f} ({:.6f}, {:.6f}, {:.6f})'.format(
-            train_loss, train_loss_mse, train_loss_ssim, train_loss_kl)
-        log += '  valid loss: {:.6f} ({:.6f}, {:.6f}, {:.6f})'.format(
-            valid_loss, valid_loss_mse, valid_loss_ssim, valid_loss_kl)
-        log += '  elapsed time: {:.3f}'.format(elapsed_time)
-        print(log)
+        if epoch % 100 == 0 or (epoch % 10 == 0 and epoch <= 100):
+            valid_mean = torch.cat(self.valid_mean, dim=0)
+            valid_label = torch.cat(self.valid_label, dim=0)
+            self.valid_mean = []
+            self.valid_label = []
 
-        # save model
-        if valid_loss < best_test:
-            best_test = valid_loss
-            path_model_param_best = os.path.join(
-                out_dir, 'model_param_best.pt')
-            torch.save(model.state_dict(), path_model_param_best)
-            if wandb_flag:
-                wandb.save(path_model_param_best)
-
-        if epoch % 100 == 0:
-            model_param_dir = os.path.join(out_dir, 'model_param')
-            if not os.path.exists(model_param_dir):
-                os.mkdir(model_param_dir)
-            path_model_param = os.path.join(
-                model_param_dir,
-                'model_param_{:06d}.pt'.format(epoch))
-            torch.save(model.state_dict(), path_model_param)
-            if wandb_flag:
-                wandb.save(path_model_param)
-
-        # save checkpoint
-        path_checkpoint = os.path.join(out_dir, 'checkpoint.pt')
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss': loss,
-        }, path_checkpoint)
-
-        # plot loss
-        fig_loss.clf()
-        plot_losses(fig_loss, train_losses, valid_losses,
-                    train_losses_mse, valid_losses_mse,
-                    train_losses_ssim, valid_losses_ssim,
-                    train_losses_kl, valid_losses_kl)
-        fig_loss.savefig(os.path.join(out_dir, 'loss.png'))
-
-        # show output
-        if epoch % 10 == 0:
-            image_ans = formatImages(image)
-            image_hat = formatImages(y)
-            fig_reconstructed_image.clf()
+            image_ans = formatImages(self.image)
+            image_hat = formatImages(self.y)
+            self.fig_reconstructed_image.clf()
             plot_reconstructed_image(
-                fig_reconstructed_image,
+                self.fig_reconstructed_image,
                 image_ans,
                 image_hat,
                 col=4,
                 epoch=epoch
             )
-            fig_reconstructed_image.savefig(
-                os.path.join(out_dir, 'reconstructed_image.png'))
+            self.fig_reconstructed_image.savefig(
+                os.path.join(self.out_dir, 'reconstructed_image.png'))
 
-            fig_latent_space.clf()
-            plot_latent_space(fig_latent_space, valid_mean,
-                              valid_label, epoch=epoch)
-            fig_latent_space.savefig(
-                os.path.join(out_dir, 'latent_space.png'))
+            self.fig_latent_space.clf()
+            plot_latent_space(
+                self.fig_latent_space,
+                valid_mean,
+                valid_label,
+                epoch=epoch,
+            )
+            self.fig_latent_space.savefig(
+                os.path.join(self.out_dir, 'latent_space.png'))
 
-            fig_2D_Manifold.clf()
-            if conditional:
-                label = label[0]
+            self.fig_2D_Manifold.clf()
+            if self.conditional:
+                label = self.label[0]
             else:
                 label = None
-            plot_2D_Manifold(fig_2D_Manifold, model.module, device,
-                             z_sumple=valid_mean, col=20, epoch=epoch,
-                             label=label, label_transform=label_transform)
-            fig_2D_Manifold.savefig(
-                os.path.join(out_dir, '2D_Manifold.png'))
+            plot_2D_Manifold(
+                self.fig_2D_Manifold,
+                self.model,
+                self.device,
+                z_sumple=valid_mean,
+                col=20,
+                epoch=epoch,
+                label=label,
+                label_transform=self.label_transform,
+            )
+            self.fig_2D_Manifold.savefig(
+                os.path.join(self.out_dir, '2D_Manifold.png'))
 
-            fig_latent_traversal.clf()
-            plot_latent_traversal(fig_latent_traversal, model.module, device,
-                                  row=valid_mean.shape[1], col=10, epoch=epoch,
-                                  label=label, label_transform=label_transform)
-            fig_latent_traversal.savefig(
-                os.path.join(out_dir, 'latent_traversal.png'))
+            self.fig_latent_traversal.clf()
+            plot_latent_traversal(
+                self.fig_latent_traversal,
+                self.model,
+                self.device,
+                row=valid_mean.shape[1],
+                col=10,
+                epoch=epoch,
+                label=label,
+                label_transform=self.label_transform,
+            )
+            self.fig_latent_traversal.savefig(
+                os.path.join(self.out_dir, 'latent_traversal.png'))
 
-            if wandb_flag:
+            if self.wandb_flag:
                 wandb.log({
                     'epoch': epoch,
-                    'reconstructed_image': wandb.Image(fig_reconstructed_image),
-                    'latent_space': wandb.Image(fig_latent_space),
-                    '2D_Manifold': wandb.Image(fig_2D_Manifold),
-                    'latent_traversal': wandb.Image(fig_latent_traversal),
+                    'reconstructed_image': wandb.Image(self.fig_reconstructed_image),
+                    'latent_space': wandb.Image(self.fig_latent_space),
+                    '2D_Manifold': wandb.Image(self.fig_2D_Manifold),
+                    'latent_traversal': wandb.Image(self.fig_latent_traversal),
                 })
 
-        # wandb
-        if wandb_flag:
-            wandb.log({
-                'epoch': epoch,
-                'iteration': len(train_loader) * epoch,
-                'train_loss': train_loss,
-                'train_loss_mse': train_loss_mse,
-                'train_loss_ssim': train_loss_ssim,
-                'train_loss_kl': train_loss_kl,
-                'valid_loss': valid_loss,
-                'valid_loss_mse': valid_loss_mse,
-                'valid_loss_ssim': valid_loss_ssim,
-                'valid_loss_kl': valid_loss_kl,
-            })
-            wandb.save(path_checkpoint)
+            plt.close()
 
-    print('total elapsed time: {} [s]'.format(total_elapsed_time))
+    def train(self, n_epochs: int):
+        return super().train(n_epochs, callback=self.plot_result)
 
 
 def torchvision_dataset(dataset, image_size):
@@ -327,88 +325,33 @@ def torchvision_dataset(dataset, image_size):
 
 
 def main(args):
-    train_dataset, valid_dataset, label_dim = torchvision_dataset(
-        args.data, image_size=args.image_size)
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
+    VAETrainer(
+        data_path=args.data,
+        out_dir=args.output,
         batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=8,
-        # pin_memory=True,
-    )
-    valid_loader = torch.utils.data.DataLoader(
-        valid_dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=8,
-        # pin_memory=True,
-        drop_last=True,
-    )
-
-    image, label = train_dataset[0]
-    n_channel = image.shape[-3]
-    def label_transform(x): return x
-    if args.conditional:
-        label_transform = to_one_hot(label_dim)
-    else:
-        label_dim = 0
-    model = VAE(
-        z_dim=5,
+        learning_rate=args.learning_rate,
         image_size=args.image_size,
-        n_channel=n_channel,
-        label_dim=label_dim
-    )
-
-    if not os.path.exists('results'):
-        os.mkdir('results')
-    out_dir = 'results/' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    os.mkdir(out_dir)
-
-    if args.wandb:
-        wandb.init(project='VAE')
-        wandb.watch(model)
-
-        config = wandb.config
-
-        config.data_path = args.data
-        config.epoch = args.epoch
-        config.batch_size = args.batch_size
-        config.learning_rate = args.learning_rate
-        config.image_size = args.image_size
-        config.gpu_num = args.gpu
-        config.conditional = args.conditional
-
-        config.train_data_num = len(train_dataset)
-        config.valid_data_num = len(valid_dataset)
-
-    train_VAE(
-        n_epochs=args.epoch,
-        train_loader=train_loader,
-        valid_loader=valid_loader,
-        model=model,
-        loss_fn=VAELoss(),
-        out_dir=out_dir,
-        lr=args.learning_rate,
         wandb_flag=args.wandb,
-        gpu_num=args.gpu,
+        gpu=args.gpu,
         conditional=args.conditional,
-        label_transform=label_transform,
-    )
+    ).train(args.epoch)
 
 
 def argparse():
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('--data', type=str, default='mnist')
+    parser.add_argument('--data', type=str)
+    parser.add_argument('--output', type=str, default='./results/test/')
     parser.add_argument('--epoch', type=int, default=10000)
     parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--learning_rate', type=float, default=0.01)
     parser.add_argument('--image_size', type=int, default=256)
     parser.add_argument('--wandb', action='store_true')
     def tp(x): return list(map(int, x.split(',')))
     parser.add_argument('--gpu', type=tp, default='0')
     parser.add_argument('--conditional', action='store_true')
-    return parser.parse_args()
+    args = parser.parse_args()
+    return args
 
 
 if __name__ == '__main__':

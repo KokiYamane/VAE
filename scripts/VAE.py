@@ -145,7 +145,7 @@ class VAE(nn.Module):
 
 
 class VAELoss(nn.Module):
-    def __init__(self, weight_mse=100.0, weight_ssim=10.0):
+    def __init__(self, weight_mse=1000.0, weight_ssim=10.0):
         super().__init__()
 
         self.weight_mse = weight_mse

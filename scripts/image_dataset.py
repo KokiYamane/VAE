@@ -21,7 +21,8 @@ class ImageDataset(Dataset):
     ):
         self.image_size = image_size
         self.transform = transforms.Compose([
-            transforms.RandomRotation(180, fill=(0,)),
+            # transforms.RandomRotation(180, fill=(0,)),
+            transforms.RandomRotation(180, fill=(1,)),
             # transforms.ColorJitter(
             #     brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
         ])
@@ -91,14 +92,10 @@ class ImageDataset(Dataset):
 
             image = cv2.imread(image_paths[idx], 0)
             image = cv2.Canny(image, 35, 50)
-            # image = cv2.Laplacian(image, cv2.CV_8UC1)
-            # ret, image = cv2.threshold(image, 0, 255, cv2.THRESH_OTSU)
             kernel = np.ones((5, 5), np.uint8)
             image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
-            # print(image.shape)
 
             image = transform(image)
-            # print(image.shape)
             return idx, image
 
         image_list = []
