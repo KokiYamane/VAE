@@ -52,11 +52,11 @@ class ImageDataset(Dataset):
             #         os.path.join(image_folder_path, '*.png'))
             image = self._load_images(paths)
             image_list.extend(image)
-            # label_list.extend([i] * len(image))
-            label_list.extend([0] * len(image))
+            label_list.extend([i] * len(image))
+            # label_list.extend([0] * len(image))
 
-        # self.label_dim = i + 1
-        self.label_dim = 1
+        self.label_dim = i + 1
+        # self.label_dim = 1
 
         self.image = torch.stack(image_list)
         self.label = torch.tensor(label_list)

@@ -344,7 +344,7 @@ def argparse():
     parser.add_argument('--output', type=str, default='./results/test/')
     parser.add_argument('--epoch', type=int, default=10000)
     parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--learning_rate', type=float, default=0.01)
+    parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--image_size', type=int, default=256)
     parser.add_argument('--wandb', action='store_true')
     def tp(x): return list(map(int, x.split(',')))
