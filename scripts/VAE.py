@@ -60,11 +60,13 @@ class Encoder(nn.Module):
                     padding=2,
                     expand_ratio=6,
                 ))
+        feature_size = image_size // 2**(len(channels)-1)
+        conv_list.append(nn.AvgPool2d(kernel_size=feature_size))
         conv_list.append(nn.Flatten())
         self.conv = nn.Sequential(*conv_list)
 
-        feature_size = image_size // 2**(len(channels)-1)
-        feature_dim = channels[-1] * feature_size ** 2
+        # feature_dim = channels[-1] * feature_size ** 2
+        feature_dim = channels[-1]
 
         self.dense_encmean = nn.Linear(feature_dim, z_dim)
         self.dense_encvar = nn.Linear(feature_dim, z_dim)

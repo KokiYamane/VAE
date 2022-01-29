@@ -87,7 +87,7 @@ class VAETrainer(Tranier):
             label_dim = 0
             self.label_transform = lambda x: None
         model = VAE(
-            z_dim=5,
+            z_dim=10,
             image_size=args.image_size,
             n_channel=n_channel,
             label_dim=label_dim
