@@ -22,7 +22,7 @@ class InvertedResidual(nn.Module):
                 bias=False,
             ),
             nn.BatchNorm2d(hidden_channels),
-            nn.ReLU6(),
+            nn.ReLU(),
 
             # depth wise
             nn.Conv2d(
@@ -35,7 +35,7 @@ class InvertedResidual(nn.Module):
                 bias=False
             ),
             nn.BatchNorm2d(hidden_channels),
-            nn.ReLU6(),
+            nn.ReLU(),
 
             # point wise
             nn.Conv2d(
@@ -45,7 +45,7 @@ class InvertedResidual(nn.Module):
                 bias=False,
             ),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU6(),
+            nn.ReLU(),
         )
 
     def forward(self, x):
@@ -175,6 +175,13 @@ class Decoder(nn.Module):
         x = torch.linspace(-1, 1, width).repeat(height, 1)
         # print(x.shape)
         y = torch.linspace(-1, 1, height).tile(width, 1).permute(1, 0)
+
+        # translate
+        # if affine is not None:
+        #     scale, theta, tx, ty = affine.split(1, dim=1)
+        #     x += tx
+        #     y += ty
+
         # print(y)
         # y = torch.linspace(-1.0, 1.0, height).repeat_interleave(width)
         # xy = torch.t(torch.stack([x, y])).to(z.device)
@@ -183,27 +190,38 @@ class Decoder(nn.Module):
         xy = xy.repeat(z.shape[0], 1, 1, 1)
         # print(xy.shape)
 
-        # t = torch.cat([tx, ty], dim=1)
-        # t = t.unsqueeze(1).repeat(1, xy.shape[1], 1)
-        # # print(t.shape)
-        # xy += t
+        if affine is not None:
+            scale, theta, tx, ty = affine.split(1, dim=1)
+            # # xy = transforms.functional.affine(
+            # #     xy, angle=theta, translate=[tx, ty], scale=scale, shear=0.0)
 
-        # cos = scale * torch.cos(theta)
-        # sin = scale * torch.sin(theta)
-        # rot = torch.stack([
-        #     cos, sin,
-        #     -sin, cos
-        # ]).reshape(cos.shape[0], 2, 2)
-        # print(rot.shape)
-        # rot = rot.unsqueeze(1).repeat(1, xy.shape[1], 1, 1)
-        # print(rot.shape)
-        # print(xy.shape)
-        # batch_size, pixel_num, _ = xy.shape
-        # rot = rot.reshape(batch_size * pixel_num, 2, 2)
-        # xy = xy.reshape(batch_size * pixel_num, 2)
-        # xy = torch.matmul(xy, rot)
-        # xy = xy.reshape(batch_size, pixel_num, 2)
-        # print(xy.shape)
+            # translate
+            t = torch.cat([tx, ty], dim=1)
+            # print(t.shape)
+            t = t.repeat(xy.shape[2], xy.shape[3], 1, 1)
+            # print(t.shape)
+            t = t.permute(2, 3, 0, 1)
+            # print(t.shape)
+            # print(xy.shape)
+            xy += t
+
+            # rotation and scale
+            # cos = scale * torch.cos(theta)
+            # sin = scale * torch.sin(theta)
+            # rot = torch.stack([
+            #     cos, sin,
+            #     -sin, cos
+            # ]).reshape(cos.shape[0], 2, 2)
+            # print(rot.shape)
+            # rot = rot.unsqueeze(1).repeat(1, xy.shape[1], 1, 1)
+            # print(rot.shape)
+            # print(xy.shape)
+            # batch_size, pixel_num, _ = xy.shape
+            # rot = rot.reshape(batch_size * pixel_num, 2, 2)
+            # xy = xy.reshape(batch_size * pixel_num, 2)
+            # xy = torch.matmul(xy, rot)
+            # xy = xy.reshape(batch_size, pixel_num, 2)
+            # print(xy.shape)
 
         if label is not None:
             v = self.dense_label(label.float()).to(z.device)
@@ -226,11 +244,6 @@ class Decoder(nn.Module):
         # image = image.permute(0, 2, 1)
         # image = image.reshape(image.shape[0], image.shape[1], height, width)
         # print(image.shape)
-
-        # if affine is not None:
-        #     scale, theta, tx, ty = affine.split(1, dim=1)
-        #     xy = transforms.functional.affine(
-        #         xy, angle=theta, translate=[tx, ty], scale=scale, shear=0.0)
 
         return image
 
@@ -261,7 +274,7 @@ class VAE(nn.Module):
 
 
 class VAELoss(nn.Module):
-    def __init__(self, weight_mse=1000.0, weight_ssim=0.0):
+    def __init__(self, weight_mse=1000.0, weight_ssim=10.0):
         super().__init__()
 
         self.weight_mse = weight_mse
