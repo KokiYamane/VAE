@@ -79,12 +79,8 @@ class Encoder(nn.Module):
                     expand_ratio=6,
                 )
             )
-        # feature_size = image_size // 2**(len(channels) - 1)
-        # conv_list.append(nn.AvgPool2d(kernel_size=feature_size))
-        # conv_list.append(nn.Flatten())
         self.conv = nn.Sequential(*conv_list)
 
-        # feature_dim = channels[-1] * feature_size ** 2
         feature_dim = self.channels[-1]
 
         self.dense_mean = nn.Linear(feature_dim, z_dim)
@@ -118,35 +114,20 @@ class Decoder(nn.Module):
     def __init__(self, z_dim, channels, label_dim=0):
         super().__init__()
 
-        # input_dim = 2 + z_dim
-        # if label_dim != 0:
-        #     label_vec_dim = 3
-        #     self.dense_label = nn.Linear(label_dim, label_vec_dim)
-        #     input_dim += label_vec_dim
         self.channels = copy.deepcopy(channels)
-        # self.channels[0] = self.channels[0] + 2 + z_dim
         input_dim = 2 + z_dim
 
         # add label dim
         if label_dim != 0:
             label_vec_dim = 3
             self.dense_label = nn.Linear(label_dim, label_vec_dim)
-            # self.channels[0] += label_vec_dim
             input_dim += label_vec_dim
 
         self.channels.append(input_dim)
         self.channels.reverse()
 
-        # units = [input_dim, 512, 512, 512, n_channel]
         layer_list = []
-        # for i in range(0, len(units) - 1):
         for i in range(0, len(self.channels) - 1):
-            # layer_list.append(nn.Linear(units[i], units[i + 1]))
-            # layer_list.append(nn.Conv2d(
-            #     in_channels=units[i],
-            #     out_channels=units[i + 1],
-            #     kernel_size=1
-            # ))
             layer_list.append(
                 InvertedResidual(
                     in_channels=self.channels[i],
@@ -158,11 +139,9 @@ class Decoder(nn.Module):
                 )
             )
 
-            # if i != len(units) - 2:
             if i != len(channels) - 2:
                 layer_list.append(nn.ReLU())
         layer_list.append(nn.Sigmoid())
-        # self.dense = nn.Sequential(*layer_list)
         self.conv = nn.Sequential(*layer_list)
 
     def forward(self, z, image_size, label=None, affine=None):
@@ -171,24 +150,10 @@ class Decoder(nn.Module):
         else:
             height, width = image_size
 
-        # x = torch.tile(torch.linspace(-1.0, 1.0, width), dims=(height,))
         x = torch.linspace(-1, 1, width).repeat(height, 1)
-        # print(x.shape)
         y = torch.linspace(-1, 1, height).tile(width, 1).permute(1, 0)
-
-        # translate
-        # if affine is not None:
-        #     scale, theta, tx, ty = affine.split(1, dim=1)
-        #     x += tx
-        #     y += ty
-
-        # print(y)
-        # y = torch.linspace(-1.0, 1.0, height).repeat_interleave(width)
-        # xy = torch.t(torch.stack([x, y])).to(z.device)
         xy = torch.stack([x, y]).to(z.device)
-        # xy = xy.repeat(z.shape[0], 1, 1)
         xy = xy.repeat(z.shape[0], 1, 1, 1)
-        # print(xy.shape)
 
         if affine is not None:
             scale, theta, tx, ty = affine.split(1, dim=1)
@@ -225,25 +190,13 @@ class Decoder(nn.Module):
 
         if label is not None:
             v = self.dense_label(label.float()).to(z.device)
-            # v = v.repeat(height * width, 1, 1).permute(1, 0, 2)
-            # print(v.shape)
-            # z = torch.cat([z, v], dim=2)
             z = torch.cat([z, v], dim=1)
 
-        # z = z.repeat(height * width, 1, 1).permute(1, 0, 2)
         z = z.repeat(height, width, 1, 1)
-        # print(z.shape)
         z = z.permute(2, 3, 0, 1)
-        # print(z.shape)
-        # z = torch.cat([xy, z], dim=2)
         z = torch.cat([xy, z], dim=1)
-        # print(z.shape)
 
-        # image = self.dense(z)
         image = self.conv(z)
-        # image = image.permute(0, 2, 1)
-        # image = image.reshape(image.shape[0], image.shape[1], height, width)
-        # print(image.shape)
 
         return image
 
