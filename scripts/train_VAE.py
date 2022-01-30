@@ -138,9 +138,9 @@ class VAETrainer(Tranier):
             if self.conditional:
                 label_one_hot = self.label_transform(label)
                 label_one_hot = label_one_hot.to(self.device)
-                y, mean, std = self.model(image, label_one_hot)
+                y, mean, std = self.model(image, label_one_hot, affine=True)
             else:
-                y, mean, std = self.model(image)
+                y, mean, std = self.model(image, affine=True)
             loss_mse, loss_ssim, loss_kl = self.loss_fn(image, y, mean, std)
 
         if len(self.valid_mean) * mean.shape[0] < 1000:
@@ -228,7 +228,7 @@ class VAETrainer(Tranier):
                 self.model,
                 self.device,
                 z_sumple=valid_mean,
-                col=20,
+                col=10,
                 epoch=epoch,
                 label=label,
                 label_transform=self.label_transform,
