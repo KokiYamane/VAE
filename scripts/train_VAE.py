@@ -342,7 +342,7 @@ def argparse():
     parser = ArgumentParser()
     parser.add_argument('--data', type=str)
     parser.add_argument('--output', type=str, default='./results/test/')
-    parser.add_argument('--epoch', type=int, default=10000)
+    parser.add_argument('--epoch', type=int, default=100000)
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--image_size', type=int, default=256)

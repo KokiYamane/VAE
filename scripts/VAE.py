@@ -157,18 +157,17 @@ class Decoder(nn.Module):
 
         if affine is not None:
             scale, theta, tx, ty = affine.split(1, dim=1)
-            # # xy = transforms.functional.affine(
-            # #     xy, angle=theta, translate=[tx, ty], scale=scale, shear=0.0)
 
             # translate
             t = torch.cat([tx, ty], dim=1)
-            # print(t.shape)
             t = t.repeat(xy.shape[2], xy.shape[3], 1, 1)
-            # print(t.shape)
             t = t.permute(2, 3, 0, 1)
-            # print(t.shape)
-            # print(xy.shape)
             xy += t
+
+            # scale
+            scale = scale.repeat(xy.shape[2], xy.shape[3], 1, 2)
+            scale = scale.permute(2, 3, 0, 1)
+            xy *= scale
 
             # rotation and scale
             # cos = scale * torch.cos(theta)
@@ -227,7 +226,7 @@ class VAE(nn.Module):
 
 
 class VAELoss(nn.Module):
-    def __init__(self, weight_mse=1000.0, weight_ssim=10.0):
+    def __init__(self, weight_mse=100.0, weight_ssim=10.0):
         super().__init__()
 
         self.weight_mse = weight_mse
