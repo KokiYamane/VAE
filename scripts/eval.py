@@ -107,7 +107,9 @@ def argparse():
     parser.add_argument('--data', type=str, default='mnist')
     parser.add_argument('--model', type=str)
     parser.add_argument('--image_size', type=int, default=256)
-    def tp(x): return list(map(int, x.split(',')))
+
+    def tp(x):
+        return list(map(int, x.split(',')))
     parser.add_argument('--gpu', type=tp, default='0')
     return parser.parse_args()
 

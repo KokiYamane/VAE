@@ -8,8 +8,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
 
+
 class Tranier():
-    def __init__(self,
+    def __init__(
+        self,
         train_loader: torch.utils.data.DataLoader,
         valid_loader: torch.utils.data.DataLoader,
         model: torch.nn.Module,
@@ -35,7 +37,7 @@ class Tranier():
 
         # device setting
         self.device = torch.device(f'cuda:{gpu[0]}'
-            if torch.cuda.is_available() else 'cpu')
+                                   if torch.cuda.is_available() else 'cpu')
         print('device:', self.device)
         if torch.cuda.device_count() > 1 and len(gpu) > 1:
             print('Let\'s use', torch.cuda.device_count(), 'GPUs!')
@@ -60,20 +62,21 @@ class Tranier():
         header: str = '',
     ):
         digits = len(str(length))
-        i_str = format(i+1, '0' + str(digits))
+        i_str = format(i + 1, '0' + str(digits))
         footer = '{}/{}'.format(i_str, length)
-        if width == None:
+        if width is None:
             terminal_size = shutil.get_terminal_size()
-            width = terminal_size.columns-len(header)-len(footer)-5
+            width = terminal_size.columns - len(header) - len(footer) - 5
 
         if i >= length - 1:
             progress_bar = '=' * width
             end = end
         else:
-            num = round(i / (length-1) * width)
-            progress_bar = '=' * (num-1) + '>' + ' ' * (width-num)
+            num = round(i / (length - 1) * width)
+            progress_bar = '=' * (num - 1) + '>' + ' ' * (width - num)
             end = ''
-        print('\r\033[K{} [{}] {}'.format(header, progress_bar, footer), end=end)
+        print('\r\033[K{} [{}] {}'.format(
+            header, progress_bar, footer), end=end)
 
     def train(
         self,

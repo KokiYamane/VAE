@@ -1,13 +1,13 @@
-from ast import Tuple
+# from ast import Tuple
 import sys
 import os
-import time
-import datetime
+# import time
+# import datetime
 import wandb
 
 import torch
-from torch import nn
-import torch.optim as optim
+# from torch import nn
+# import torch.optim as optim
 import torchvision
 from torchvision import transforms
 
@@ -19,8 +19,10 @@ sys.path.append('.')
 sys.path.append('..')
 from scripts.VAE import VAE, VAELoss
 from scripts.image_dataset import ImageDataset
-from scripts.plot_result import *
 from scripts.trainer import Tranier
+from scripts.plot_result import formatImages, plot_reconstructed_image
+from scripts.plot_result import plot_latent_space, plot_2D_Manifold
+from scripts.plot_result import plot_latent_traversal
 
 
 class VAETrainer(Tranier):
@@ -347,7 +349,9 @@ def argparse():
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--image_size', type=int, default=256)
     parser.add_argument('--wandb', action='store_true')
-    def tp(x): return list(map(int, x.split(',')))
+
+    def tp(x):
+        return list(map(int, x.split(',')))
     parser.add_argument('--gpu', type=tp, default='0')
     parser.add_argument('--conditional', action='store_true')
     args = parser.parse_args()

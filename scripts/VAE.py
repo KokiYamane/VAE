@@ -2,13 +2,19 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from scripts.SSIM import SSIMLoss
-import torchvision.transforms as transforms
 import copy
 
 
 class InvertedResidual(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1,
-                 padding=0, expand_ratio=6):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        stride: int = 1,
+        padding: int = 0,
+        expand_ratio: int = 6,
+    ):
         super().__init__()
 
         hidden_channels = round(in_channels * expand_ratio)
@@ -57,13 +63,11 @@ class Encoder(nn.Module):
         super().__init__()
 
         self.channels = copy.deepcopy(channels)
-        # self.image_sze = image_size
 
         # add label dim
         if label_dim != 0:
             label_vec_dim = 3
             self.dense_label = nn.Linear(label_dim, label_vec_dim)
-            # channels = copy.deepcopy(channels)
             self.channels[0] += label_vec_dim
 
         conv_list = []
@@ -103,6 +107,7 @@ class Encoder(nn.Module):
 
         mean = self.dense_mean(x)
         std = F.relu(self.dense_var(x))
+
         if affine:
             affine = self.dense_affine(x)
             return mean, std, affine
@@ -132,9 +137,9 @@ class Decoder(nn.Module):
                 InvertedResidual(
                     in_channels=self.channels[i],
                     out_channels=self.channels[i + 1],
-                    kernel_size=3,
+                    kernel_size=1,
                     stride=1,
-                    padding=1,
+                    padding=0,
                     expand_ratio=6,
                 )
             )
@@ -165,9 +170,9 @@ class Decoder(nn.Module):
             xy += t
 
             # scale
-            scale = scale.repeat(xy.shape[2], xy.shape[3], 1, 2)
-            scale = scale.permute(2, 3, 0, 1)
-            xy *= scale
+            # scale = scale.repeat(xy.shape[2], xy.shape[3], 1, 2)
+            # scale = scale.permute(2, 3, 0, 1)
+            # xy *= torch.exp(scale)
 
             # rotation and scale
             # cos = scale * torch.cos(theta)
@@ -226,7 +231,7 @@ class VAE(nn.Module):
 
 
 class VAELoss(nn.Module):
-    def __init__(self, weight_mse=100.0, weight_ssim=10.0):
+    def __init__(self, weight_mse=1000.0, weight_ssim=10.0):
         super().__init__()
 
         self.weight_mse = weight_mse

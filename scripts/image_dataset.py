@@ -3,11 +3,11 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import glob
 import os
-from tqdm import tqdm
+# from tqdm import tqdm
 from concurrent import futures
 from PIL import Image
-import cv2
-import numpy as np
+# import cv2
+# import numpy as np
 
 
 class ImageDataset(Dataset):
@@ -23,7 +23,8 @@ class ImageDataset(Dataset):
         self.transform = transforms.Compose([
             # transforms.RandomRotation(180, fill=(0,)),
             # transforms.RandomRotation(180, fill=(1,)),
-            transforms.RandomAffine(degrees=180, translate=(0.1, 0.1), fill=(1,)),
+            transforms.RandomAffine(
+                degrees=180, translate=(0.1, 0.1), fill=(1,)),
             # transforms.ColorJitter(
             #     brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
         ])
