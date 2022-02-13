@@ -6,8 +6,8 @@ import os
 # from tqdm import tqdm
 from concurrent import futures
 from PIL import Image
-# import cv2
-# import numpy as np
+import cv2
+import numpy as np
 
 
 class ImageDataset(Dataset):
@@ -21,7 +21,6 @@ class ImageDataset(Dataset):
     ):
         self.image_size = image_size
         self.transform = transforms.Compose([
-            # transforms.RandomRotation(180, fill=(0,)),
             # transforms.RandomRotation(180, fill=(1,)),
             transforms.RandomAffine(
                 degrees=180, translate=(0.1, 0.1), fill=(1,)),
@@ -32,8 +31,21 @@ class ImageDataset(Dataset):
         image_list = []
         label_list = []
 
-        folders = glob.glob('{}/*'.format(datafolder))
-        for i, folder in enumerate(folders):
+        # folders = glob.glob(f'{datafolder}/*')
+        labels = [
+            'blue',
+            # 'brown',
+            # 'green',
+            # 'orange',
+            'pink',
+            # 'red',
+            # 'yellow',
+        ]
+
+        # for i, folder in enumerate(folders):
+        for i, label in enumerate(labels):
+            folder = os.path.join(datafolder, label)
+
             # paths = glob.glob('{}/color/*'.format(folder))
             paths = glob.glob(os.path.join(folder, '*.png'))
             # print(os.path.join(datafolder, '*.png'))
@@ -90,12 +102,19 @@ class ImageDataset(Dataset):
         def load_one_frame(idx):
             if not os.path.exists(image_paths[idx]):
                 return
-            image = Image.open(image_paths[idx])
+            # image = Image.open(image_paths[idx])
 
             # edge
             # image = cv2.imread(image_paths[idx], 0)
             # image = cv2.Canny(image, 35, 50)
             # kernel = np.ones((5, 5), np.uint8)
+            # image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
+
+            # hsv
+            image = cv2.imread(image_paths[idx], cv2.IMREAD_COLOR)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV_FULL)[:, :, 2]
+            ret2, image = cv2.threshold(image, 0, 255, cv2.THRESH_OTSU)
+            # kernel = np.ones((1, 1), np.uint8)
             # image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
 
             image = transform(image)

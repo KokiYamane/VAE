@@ -22,8 +22,8 @@ def plot_reconstructed_image(fig, images_ans, images_hat, col=4, epoch=0):
     cmap = None
     channel = images_ans.shape[3]
     if channel == 1:
-        # cmap = 'gray'
-        cmap = 'binary'
+        cmap = 'gray'
+        # cmap = 'binary'
         images_ans = np.squeeze(images_ans)
         images_hat = np.squeeze(images_hat)
 

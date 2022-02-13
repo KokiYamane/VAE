@@ -49,7 +49,8 @@ class VAETrainer(Tranier):
         self.fig_2D_Manifold = plt.figure(figsize=(10, 10))
         self.fig_latent_traversal = plt.figure(figsize=(10, 10))
         self.fig_loss = plt.figure(figsize=(10, 10))
-
+        self.valid_ans = []
+        self.valid_hat = []
         self.valid_mean = []
         self.valid_label = []
         self.train_loss_mse = 0.0
@@ -74,7 +75,7 @@ class VAETrainer(Tranier):
             shuffle=True,
             num_workers=8,
             # pin_memory=True,
-            drop_last=True,
+            # drop_last=True,
         )
 
         print('train data num:', len(train_dataset))
@@ -145,13 +146,13 @@ class VAETrainer(Tranier):
                 y, mean, std = self.model(image, affine=True)
             loss_mse, loss_ssim, loss_kl = self.loss_fn(image, y, mean, std)
 
-        if len(self.valid_mean) * mean.shape[0] < 1000:
+        if valid and len(self.valid_mean) * mean.shape[0] < 1000:
             self.valid_mean.append(mean)
             self.valid_label.append(label)
 
-        self.y = y
-        self.image = image
-        self.label = label
+        if valid and len(self.valid_ans) * y.shape[0] < 16:
+            self.valid_ans.append(image)
+            self.valid_hat.append(y)
 
         if not valid:
             self.train_loss_mse += loss_mse.item()
@@ -197,8 +198,12 @@ class VAETrainer(Tranier):
             self.valid_mean = []
             self.valid_label = []
 
-            image_ans = formatImages(self.image)
-            image_hat = formatImages(self.y)
+            valid_ans = torch.cat(self.valid_ans, dim=0)
+            valid_hat = torch.cat(self.valid_hat, dim=0)
+            image_ans = formatImages(valid_ans)
+            image_hat = formatImages(valid_hat)
+            self.valid_ans = []
+            self.valid_hat = []
             self.fig_reconstructed_image.clf()
             plot_reconstructed_image(
                 self.fig_reconstructed_image,
@@ -220,45 +225,45 @@ class VAETrainer(Tranier):
             self.fig_latent_space.savefig(
                 os.path.join(self.out_dir, 'latent_space.png'))
 
-            self.fig_2D_Manifold.clf()
-            if self.conditional:
-                label = self.label[0]
-            else:
-                label = None
-            plot_2D_Manifold(
-                self.fig_2D_Manifold,
-                self.model,
-                self.device,
-                z_sumple=valid_mean,
-                col=10,
-                epoch=epoch,
-                label=label,
-                label_transform=self.label_transform,
-            )
-            self.fig_2D_Manifold.savefig(
-                os.path.join(self.out_dir, '2D_Manifold.png'))
+            # self.fig_2D_Manifold.clf()
+            # if self.conditional:
+            #     label = self.label[0]
+            # else:
+            #     label = None
+            # plot_2D_Manifold(
+            #     self.fig_2D_Manifold,
+            #     self.model,
+            #     self.device,
+            #     z_sumple=valid_mean,
+            #     col=10,
+            #     epoch=epoch,
+            #     label=label,
+            #     label_transform=self.label_transform,
+            # )
+            # self.fig_2D_Manifold.savefig(
+            #     os.path.join(self.out_dir, '2D_Manifold.png'))
 
-            self.fig_latent_traversal.clf()
-            plot_latent_traversal(
-                self.fig_latent_traversal,
-                self.model,
-                self.device,
-                row=valid_mean.shape[1],
-                col=10,
-                epoch=epoch,
-                label=label,
-                label_transform=self.label_transform,
-            )
-            self.fig_latent_traversal.savefig(
-                os.path.join(self.out_dir, 'latent_traversal.png'))
+            # self.fig_latent_traversal.clf()
+            # plot_latent_traversal(
+            #     self.fig_latent_traversal,
+            #     self.model,
+            #     self.device,
+            #     row=valid_mean.shape[1],
+            #     col=10,
+            #     epoch=epoch,
+            #     label=label,
+            #     label_transform=self.label_transform,
+            # )
+            # self.fig_latent_traversal.savefig(
+            #     os.path.join(self.out_dir, 'latent_traversal.png'))
 
             if self.wandb_flag:
                 wandb.log({
                     'epoch': epoch,
                     'reconstructed_image': wandb.Image(self.fig_reconstructed_image),
                     'latent_space': wandb.Image(self.fig_latent_space),
-                    '2D_Manifold': wandb.Image(self.fig_2D_Manifold),
-                    'latent_traversal': wandb.Image(self.fig_latent_traversal),
+                    # '2D_Manifold': wandb.Image(self.fig_2D_Manifold),
+                    # 'latent_traversal': wandb.Image(self.fig_latent_traversal),
                 })
 
             plt.close()
