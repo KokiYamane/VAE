@@ -14,6 +14,7 @@ class InvertedResidual(nn.Module):
         stride: int = 1,
         padding: int = 0,
         expand_ratio: int = 6,
+        dropout: float = 0.0,
     ):
         super().__init__()
 
@@ -52,6 +53,8 @@ class InvertedResidual(nn.Module):
             ),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
+
+            nn.Dropout2d(dropout),
         )
 
     def forward(self, x):
@@ -81,6 +84,7 @@ class Encoder(nn.Module):
                     stride=2,
                     padding=2,
                     expand_ratio=6,
+                    dropout=0.1,
                 )
             )
         self.conv = nn.Sequential(*conv_list)
