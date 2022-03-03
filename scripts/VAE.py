@@ -107,7 +107,7 @@ class Encoder(nn.Module):
 
         x = self.conv(x)
         x = F.adaptive_avg_pool2d(x, (1, 1))
-        x = x.squeeze()
+        x = x.squeeze(-1).squeeze(-1)
 
         mean = self.dense_mean(x)
         std = F.relu(self.dense_var(x))
@@ -223,7 +223,7 @@ class VAE(nn.Module):
         epsilon = torch.randn(mean.shape).to(mean.device)
         return mean + std * epsilon
 
-    def forward(self, x, label=None, affine=False):
+    def forward(self, x, label=None, affine=True):
         if affine:
             mean, std, affine = self.encoder(x, label, affine)
         else:
@@ -235,7 +235,7 @@ class VAE(nn.Module):
 
 
 class VAELoss(nn.Module):
-    def __init__(self, weight_mse=1000.0, weight_ssim=10.0):
+    def __init__(self, weight_mse=1000.0, weight_ssim=0.0):
         super().__init__()
 
         self.weight_mse = weight_mse

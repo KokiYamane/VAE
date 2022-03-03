@@ -19,6 +19,7 @@ class ImageDataset(Dataset):
         split_ratio: float = 0.8,
         image_size: int = 64
     ):
+        self.train = train
         self.image_size = image_size
         self.transform = transforms.Compose([
             # transforms.RandomRotation(180, fill=(1,)),
@@ -89,7 +90,8 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         image = self.image[idx]
         # print(image.shape)
-        image = self.transform(image)
+        if self.train:
+            image = self.transform(image)
         return image, self.label[idx]
 
     def _load_images(self, image_paths):

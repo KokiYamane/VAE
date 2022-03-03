@@ -3,6 +3,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+from tqdm import tqdm
 sns.set()
 
 import sys
@@ -26,6 +27,7 @@ def load_model_param(filepath):
 def plot_anomaly_detection(
     images_ans: np.array,
     images_hat: np.array,
+    error: np.array,
     col=4,
 ):
     fig = plt.figure(figsize=(20, 10))
@@ -36,22 +38,26 @@ def plot_anomaly_detection(
     cmap = None
     channel = images_ans.shape[3]
     if channel == 1:
-        # cmap = 'gray'
-        cmap = 'binary'
+        cmap = 'gray'
+        # cmap = 'binary'
         images_ans = np.squeeze(images_ans)
         images_hat = np.squeeze(images_hat)
 
     row = -(-len(images_ans) // col)
-    for i, (image_ans, image_hat) in enumerate(zip(images_ans, images_hat)):
-        ax = fig.add_subplot(row, 2 * col, 2 * i + 1)
+    for i, (image_ans, image_hat, error) in enumerate(zip(images_ans, images_hat, error)):
+        ax = fig.add_subplot(row, 3 * col, 3 * i + 1)
         ax.imshow(image_ans, cmap=cmap)
         ax.axis('off')
         # ax.set_title('$i_{' + str(i) + '}$')
 
-        ax = fig.add_subplot(row, 2 * col, 2 * i + 2)
+        ax = fig.add_subplot(row, 3 * col, 3 * i + 2)
         ax.imshow(image_hat, cmap=cmap)
         ax.axis('off')
         # ax.set_title(r'$\hat{i}_{' + str(i) + '}$')
+
+        ax = fig.add_subplot(row, 3 * col, 3 * i + 3)
+        ax.imshow(error, cmap='jet')
+        ax.axis('off')
 
     # fig.suptitle('{} epoch'.format(epoch))
     fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95)
@@ -60,22 +66,28 @@ def plot_anomaly_detection(
 
 def main(args):
     valid_dataset = ImageDataset(
-        args.data, train=False, image_size=args.image_size)
+        args.data,
+        train=False,
+        image_size=args.image_size,
+        split_ratio=0.3,
+    )
+
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
-        batch_size=16,
+        batch_size=1,
         shuffle=True,
         num_workers=8,
     )
 
     image, label = valid_dataset[0]
     model = VAE(
-        z_dim=5,
+        z_dim=10,
         image_size=args.image_size,
         n_channel=image.shape[-3]
     )
     state_dict = load_model_param(args.model)
     model.load_state_dict(state_dict)
+    model.eval()
 
     # device setting
     cuda_flag = torch.cuda.is_available()
@@ -83,10 +95,10 @@ def main(args):
     model = model.to(device)
 
     pred_list = []
-    for image, label in valid_loader:
+    for image, label in tqdm(valid_loader):
         # print(image.shape)
         image = image.to(device)
-        pred, mean, std = model(image)
+        pred, mean, std = model(image, affine=True)
         # print(pred.shape)
         pred_list.append(pred)
     pred = torch.cat(pred_list, dim=0)
@@ -97,7 +109,9 @@ def main(args):
     image = image.cpu().detach().numpy().copy()
     image = image.transpose(0, 2, 3, 1)
 
-    fig = plot_anomaly_detection(image, pred)
+    diff = image - pred
+
+    fig = plot_anomaly_detection(image, pred, diff)
     fig.savefig('results/anomaly_detection.png')
 
 
