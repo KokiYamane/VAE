@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 
@@ -69,7 +70,7 @@ def main(args):
         args.data,
         train=False,
         image_size=args.image_size,
-        split_ratio=0.3,
+        split_ratio=0.5,
     )
 
     valid_loader = torch.utils.data.DataLoader(
@@ -111,8 +112,31 @@ def main(args):
 
     diff = image - pred
 
-    fig = plot_anomaly_detection(image, pred, diff)
+    fig = plot_anomaly_detection(image, pred, diff, col=4)
     fig.savefig('results/anomaly_detection.png')
+
+    out_dir = './results/anomaly_detection'
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    for i, (image_ans, image_hat, error) in enumerate(zip(image, pred, diff)):
+        fig = plt.figure(figsize=(20, 10))
+
+        cmap = 'gray'
+        ax = fig.add_subplot(1, 3, 1)
+        ax.imshow(image_ans, cmap=cmap)
+        ax.axis('off')
+        # ax.set_title('$i_{' + str(i) + '}$')
+
+        ax = fig.add_subplot(1, 3, 2)
+        ax.imshow(image_hat, cmap=cmap)
+        ax.axis('off')
+        # ax.set_title(r'$\hat{i}_{' + str(i) + '}$')
+
+        ax = fig.add_subplot(1, 3, 3)
+        ax.imshow(error, cmap='jet')
+        ax.axis('off')
+        fig.savefig(f'./results/anomaly_detection/{i}.png')
+
 
 
 def argparse():

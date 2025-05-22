@@ -9,7 +9,7 @@ services:
       - ../:/root/workspace/
       - ../../datasets:/root/datasets/
       - /tmp/.X11-unix:/tmp/.X11-unix
-    # runtime: nvidia
+    runtime: nvidia
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       DISPLAY: ${DISPLAY}

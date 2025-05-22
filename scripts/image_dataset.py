@@ -6,7 +6,7 @@ import os
 # from tqdm import tqdm
 from concurrent import futures
 from PIL import Image
-import cv2
+# import cv2
 import numpy as np
 
 

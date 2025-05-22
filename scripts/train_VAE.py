@@ -347,7 +347,7 @@ def main(args):
 def argparse():
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('--data', type=str)
+    parser.add_argument('--data', type=str, default='mnist')
     parser.add_argument('--output', type=str, default='./results/test/')
     parser.add_argument('--epoch', type=int, default=100000)
     parser.add_argument('--batch_size', type=int, default=16)
