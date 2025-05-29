@@ -137,7 +137,8 @@ class VAETrainer(Tranier):
         image, label = batch
         image = image.to(self.device)
 
-        with torch.cuda.amp.autocast():
+        # with torch.cuda.amp.autocast():
+        with torch.amp.autocast('cuda'):
             if self.conditional:
                 label_one_hot = self.label_transform(label)
                 label_one_hot = label_one_hot.to(self.device)
@@ -350,7 +351,7 @@ def argparse():
     parser.add_argument('--data', type=str, default='mnist')
     parser.add_argument('--output', type=str, default='./results/test/')
     parser.add_argument('--epoch', type=int, default=100000)
-    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--batch_size', type=int, default=20)
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--image_size', type=int, default=256)
     parser.add_argument('--wandb', action='store_true')

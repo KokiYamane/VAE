@@ -45,7 +45,8 @@ class Tranier():
         model.to(self.device)
 
         # acceleration
-        self.scaler = torch.cuda.amp.GradScaler()
+        # self.scaler = torch.cuda.amp.GradScaler()
+        self.scaler = torch.amp.GradScaler()
         torch.backends.cudnn.benchmark = True
 
         # make directory
@@ -91,7 +92,8 @@ class Tranier():
             running_loss = 0.0
             self.model.train()
             for i, batch in enumerate(self.train_loader):
-                with torch.cuda.amp.autocast():
+                # with torch.cuda.amp.autocast():
+                with torch.amp.autocast('cuda'):
                     loss = self.calc_loss(batch)
 
                 self.optimizer.zero_grad()
